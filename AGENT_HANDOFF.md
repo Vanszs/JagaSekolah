@@ -1,6 +1,6 @@
 # AGENT HANDOFF — JagaSekolah
 
-> Catatan progres untuk AI agent berikutnya. Dibuat 2026-06-13.
+> Catatan progres untuk AI agent berikutnya. Diperbarui 2026-06-13 (sesi 2).
 > Baca ini dulu sebelum bekerja. Konteks proyek lengkap ada di `PLAN.md`,
 > `ARCHITECTURE.md`, `DEPLOY.md`. Ringkasan produk di `README.md`.
 
@@ -12,128 +12,149 @@
 > Detail lengkap + larangan + checklist ada di **§6** dokumen ini. Setiap output UI yang
 > melanggar = DITOLAK dan harus di-regenerate. Ini standar wajib proyek, bukan preferensi.
 
+> ## 🟢 ATURAN #2 — react-doctor HARUS 100/100
+> Setiap kali menyentuh komponen React/TSX, jalankan `npx react-doctor@latest` dan
+> jaga skor tetap **100/100**. Perbaikan harus GENUINE (bukan suppress/no-op). Untuk
+> false-positive yang terdokumentasi, pakai `doctor.config.json` (lihat §9), JANGAN
+> inline-disable asal.
+
 ---
 
 ## 1. Ringkasan proyek (1 menit)
 
 **JagaSekolah** — Sistem Peringatan Dini Putus Sekolah SD/SMP (lomba LIDM ITDP).
-Next.js App Router + TypeScript, Prisma + SQLite (dev), Auth.js v5 (NextAuth),
-Tailwind. Mesin scoring **rule-based** (transparan, bukan kotak hitam): kerangka
-**ABC** (Attendance, Behavior, Course) + konteks lokal Indonesia. RBAC 5 role.
+Next.js 15 App Router + TypeScript, **Prisma + PostgreSQL di belakang PgBouncer**
+(transaction pooling), Auth.js v5 (NextAuth), Tailwind v3, **Recharts** (charts).
+Mesin scoring **rule-based** (transparan, bukan kotak hitam): kerangka **ABC**
+(Attendance, Behavior, Course) + konteks lokal Indonesia. RBAC 5 role.
 
 **Prinsip non-negotiable:** transparan (tiap label punya alasan), privacy-by-design
-(RBAC + enkripsi PII + audit), demo-able offline, hanya pakai data yang sekolah
-sudah punya.
+(RBAC + enkripsi PII + audit, **dinas TIDAK pernah lihat identitas siswa**),
+demo-able offline, hanya pakai data yang sekolah sudah punya, **TIDAK mengarang
+metrik** (kalau tak ada datanya → tunda + tampilkan placeholder jujur).
 
 ---
 
-## 2. Yang DIKERJAKAN di sesi ini (kronologis)
+## 2. Yang DIKERJAKAN (kronologis)
 
-Semua commit ada di branch `master` (lokal, **belum di-push** — user belum minta push).
+Semua di branch `master` (lokal, **belum di-push** — push bila user minta).
 
+**Sesi 1** (`5f1f847` ke bawah): redesign landing, login server-action, seed env,
+unit test 43→274, fix `configVersion`, authCore extract + phantom-ui skeleton.
+
+**Sesi 2 (terbaru) — 5 commit besar:**
 | Commit | Isi |
 |--------|-----|
-| `6e7703b` | redesign 4 section landing (FaktorRisiko, DashboardPreview, Dampak, FAQ) — hapus AI-slop tells |
-| `cac2e2a` | fix konektor CaraKerja (per-step segment, valid HTML, no overshoot) |
-| `bbee308` | redesign Hero jadi full-bleed (Option 1+2: artwork edge-to-edge + typography overlap) |
-| `d1939a3` | ganti artwork hero ke `public/images/hero-bg-2.png` (panorama open-sky-left) |
-| `fff7d17` | login page modern split-screen + Google OAuth |
-| `dcb6a8b` | fix react-doctor warnings (FAQ role=region→section, Navbar useSyncExternalStore) |
-| `1b270fe` | seed: password per-role dari env (SEED_PASSWORD_*) |
-| `08fe2a3` | seed: email per-role dari env (SEED_EMAIL_*) |
-| `7f1ed02` | fix dashboard: requireDashboardContext() redirect (bukan throw 401) + error.tsx |
-| `b142398` | **fix login bug**: pindah ke Server Action (client signIn v5 tak persist cookie) + logger quiet + email normalize |
-| `5f1f847` | unit test 43→274 + fix bug `configVersion` (bobot ke-strip) |
-| `(uncommitted)` | **authCore extract + 30 auth test + phantom-ui skeleton** — BELUM di-commit |
+| `b4943e6` | **DB: SQLite → PostgreSQL + PgBouncer** (transaction pooling). schema `provider=postgresql`+`directUrl`; docker-compose postgres:16 + edoburu/pgbouncer; migration Postgres + partial-unique isLatest index; drop orphan `Kelas.waliKelasId`; docs. |
+| `40a02c4` | **fix auth+ui**: font next/font (fix Times New Roman); **middleware Edge-safe (`authEdge`) — fix JWTSessionError redirect-loop tiap pindah halaman**; OAuth login-only + `email_verified`; login action redirect already-authed; +authCore robustness tests. |
+| `24938aa` | **fix(audit)**: P0 empty-alasan (parseAlasan), api/siswa pagination filter di DB, de-dup AKSI_LABEL/date helpers + RISK_CONFIG, scoring threshold (rm magic 50) + real `absensiPerPeriode`, rbac `creatableRoles`, rateLimit+apiHandler ctx, hapus dead `crypto.ts`, Navbar scroll-spy. |
+| `0fa4b41` | **feat(dashboard)**: Recharts charts + dashboard per-role (NationalOverview aggregate-only, Dinas anonim, Kepsek, Guru/BK); breadcrumb drill-down Nasional→Provinsi→Kabupaten→Sekolah→Kelas→Siswa; superadmin pages tenant/users(+baru)/audit/security; analytics layer; seed snapshot historis 12 bulan; doctor.config. |
+| `1669267` | chore: gitignore screenshot/playwright artifacts. |
 
 ---
 
-## 3. STATUS SAAT INI (yang belum selesai / belum commit)
+## 3. STATUS SAAT INI
 
-### 3a. Auth unit tests — SELESAI, perlu commit
-- Ekstrak callback Auth.js jadi fungsi murni dependency-injected:
-  **`src/lib/authCore.ts`** — `authorizeCredentials`, `signInGuard`, `enrichJwt`,
-  `buildSessionUser`, `CredsSchema` (semua pakai "ports" agar bisa diuji tanpa DB/bcrypt).
-- **`src/lib/auth.ts`** sekarang membungkus authCore dgn port Prisma+bcrypt nyata
-  (perilaku identik dgn sebelumnya).
-- **`tests/authCore.test.ts`** — 30 test: normalisasi email, password salah/kosong,
-  user nonaktif, Google guard (provisioned/unprovisioned/inactive/no-email),
-  jwt enrich (credentials vs OAuth), session revocation (tokenVersion mismatch/inactive/not-found).
-- Suite penuh: **304 test, 0 fail**. `tsc` bersih.
+- **Working tree CLEAN.** `tsc` bersih · **332 test / 0 fail** · `npm run build` sukses ·
+  **react-doctor 100/100**.
+- DB Postgres+PgBouncer berjalan via Docker, sudah di-migrate + seed (data sintetis:
+  1 provinsi, 1 kabupaten, 2 sekolah, 85 siswa, 12 bulan snapshot risiko historis).
+- Dashboard tiap role sudah chart-rich & tepat peran (superadmin agregat nasional,
+  dinas regional anonim, kepsek sekolah, guru/bk fokus aksi). Drill-down superadmin OK.
 
-### 3b. phantom-ui skeleton — SELESAI, perlu commit + verifikasi visual
-- Install `@aejkatappaja/phantom-ui@1.2.0` (pinned exact; MIT; **diverifikasi aman** —
-  653★, no postinstall hook). CATATAN: npm `phantom-ui` (tanpa scope) ADALAH paket
-  BERBEDA & mencurigakan — JANGAN pakai itu. Yang benar `@aejkatappaja/phantom-ui`.
-- `src/phantom-ui.d.ts` — deklarasi JSX `<phantom-ui>`.
-- `src/components/Phantom.tsx` — wrapper klien (lazy-import web component, render
-  `<phantom-ui loading>`). Skeleton struktur-aware: markup nyata = template skeleton.
-- `src/app/layout.tsx` — import `@aejkatappaja/phantom-ui/ssr.css` (anti flash).
-- Route-segment loading UI (Next streaming): `src/app/dashboard/loading.tsx`,
-  `src/app/dashboard/siswa/loading.tsx`, `src/app/dashboard/siswa/[id]/loading.tsx`.
-- `tsc` bersih, dev server jalan tanpa error. **Verifikasi visual skeleton di browser
-  belum tuntas** (data seed termuat sangat cepat → skeleton hanya flash; throttle
-  network untuk melihatnya, atau cek route lambat).
-
-### ✅ SUDAH SELESAI & DI-COMMIT (update terakhir)
-- `3c3f5bf` authCore extract + 30 auth test.
-- `de9fc3a` phantom-ui skeleton (Phantom.tsx, d.ts, ssr.css, 3 loading.tsx).
-- `7b6865f` AGENT_HANDOFF.md ini.
-- **`npm run build` SUDAH dijalankan → sukses** (semua route compile, web-component
-  Lit aman dgn RSC/SSR, tanpa error). 304 test pass. `tsc` bersih. Working tree clean.
-
-### ⚠️ SISA (opsional / belum dikerjakan)
-1. (Opsional) Perkaya pending-state form login dgn skeleton phantom-ui — sekarang
-   pakai `useFormStatus` spinner; sudah cukup, tinggal preferensi.
-2. (Opsional) Verifikasi VISUAL skeleton phantom-ui dgn throttle network di /dashboard
-   (build & runtime sudah OK; skeleton hanya flash karena data seed cepat).
-3. **Belum di-`git push`** — semua commit masih lokal di `master`. Push bila user minta.
+### ⚠️ SISA / belum dikerjakan (hasil audit gap sidebar, sesi 2)
+Audit 5-POV (lihat ringkasan) menemukan **gap UI** (bukan data — API/data sudah ada):
+1. **P0 — Intervensi CRUD tanpa UI**: `POST/PATCH/DELETE /api/intervensi` LENGKAP
+   (auth, zod, optimistic lock, audit) tapi **tak ada form/tombol**. Guru & BK TIDAK
+   bisa mencatat tindak lanjut dari web. → bangun form di `/dashboard/siswa/[id]`.
+2. **P0 — Kepsek**: RBAC mengizinkan kepsek membuat akun guru/BK tapi TAK ada menu
+   sidebar (form `/dashboard/admin/users/baru` hanya via URL); roster kelas
+   (`/dashboard/sekolah/[id]/kelas/[kelasId]`) superadmin-only → kepsek tak bisa
+   klik ke kelasnya. → tambah menu "Kelola Pengguna" + longgarkan RBAC roster utk kepsek.
+3. **P0 — Dinas** (cuma 2 menu): butuh Peringkat/Perbandingan Sekolah + Laporan/Ekspor.
+4. **P0 — Superadmin**: trigger Hitung-Ulang Risiko (`/api/risiko/recompute` ada, no UI)
+   + Status Sinkronisasi (SyncLog ada, no UI).
+5. **NEEDS-DATA (JANGAN bangun tanpa skema)**: funnel/outcome/success-rate intervensi
+   (Intervensi tak punya tahap/hasil), jadwal konseling, rujukan, geo-heatmap
+   (Wilayah/Sekolah tak punya lat/lng), alert-threshold config, announcement.
+6. **Belum `git push`**.
 
 ---
 
 ## 4. PETA ARSITEKTUR yang RELEVAN (biar tak salah asumsi)
 
-### Auth (Auth.js v5 / NextAuth)
-- **Strategy JWT, `maxAge: 15 menit`** (SANGAT pendek). Saat testing manual, sesi sering
-  lapse di sela langkah → terlihat "redirect ke /login". Itu BUKAN bug; re-login.
-- **Login memakai Server Action** (`src/app/login/actions.ts`), BUKAN client `signIn`.
-  Alasan: client `signIn` dari `next-auth/react` TIDAK persist cookie credentials di v5-beta
-  (chunk 404 / quirk redirect:false). Jangan balik ke client signIn.
-- **Middleware (`src/middleware.ts`) TIDAK gate `/dashboard`** — Edge runtime + Prisma
-  di session callback tidak andal. Gate dilakukan oleh **layout server** via `auth()`+`redirect`.
-  Middleware tetap melindungi `/api/*`.
-- **RBAC scope helpers** (`src/lib/rbac.ts`): `siswaScope` (dinas→403), `agregatScope`
-  (hanya dinas/superadmin), `resolveSiswa` (IDOR-safe), `requireRole`, `assertSameSekolah`.
-- **`requireDashboardContext()`** (`src/lib/session.ts`) → redirect /login saat 401
-  (dipakai semua page dashboard). `requireContext()` (lempar 401) tetap untuk API routes.
+### Auth (Auth.js v5 / NextAuth) — split Edge/Node
+- **Strategy JWT, `maxAge: 15 menit`** (SANGAT pendek, sengaja utk keamanan data anak).
+  Saat testing manual sesi sering lapse di sela langkah → re-login. JANGAN naikkan tanpa diskusi.
+- **Login = Server Action** (`src/app/login/actions.ts`), BUKAN client `signIn` (v5-beta
+  client tak persist cookie). Action redirect kalau pemanggil sudah login.
+- **⚠️ KOREKSI PENTING (bug fix sesi 2): SPLIT auth instance.**
+  - `src/lib/auth.ts` = instance PENUH (Prisma+bcrypt, session callback cek `tokenVersion`).
+    Dipakai layout/page/route-handler (Node runtime).
+  - `src/lib/authEdge.ts` = instance Edge-safe (token-only, **TANPA Prisma**). HANYA dipakai
+    `src/middleware.ts`. Dulu middleware pakai `auth` penuh → Prisma jalan di Edge →
+    `PrismaClientValidationError` → `JWTSessionError` → sesi terbaca null → **redirect
+    /login tiap pindah halaman**. JANGAN pakai `auth` (penuh) di middleware lagi.
+- Gate `/dashboard` ada di **layout server** (`requireDashboardContext`) + middleware
+  (authEdge) sebagai lapis tambahan. API self-gate via `requireContext()`.
+- **RBAC helpers** (`src/lib/rbac.ts`): `siswaScope` (dinas→403), `agregatScope`
+  (dinas/superadmin), `resolveSiswa` (IDOR-safe; superadmin lolos), `requireRole`,
+  `assertSameSekolah`, **`creatableRoles`/`canCreateUser`/`canManageUsers`** (sumber
+  tunggal: superadmin→semua, kepsek→guru/bk, lainnya→none; tak ada yg bisa buat superadmin).
+- `requireDashboardContext()` (`src/lib/session.ts`) → redirect /login saat 401
+  (redirect DI LUAR try/catch — kalau di dalam akan tertelan). `requireContext()` lempar 401 utk API.
 - Role: `superadmin | dinas | kepsek | guru | bk`.
-- Google OAuth: aktif hanya bila `AUTH_GOOGLE_ID`+`AUTH_GOOGLE_SECRET` di env. Akun
-  TIDAK dibuat otomatis — hanya email User aktif yang sudah di-provisioning boleh masuk
-  (guard di `signInGuard`).
+- **Google OAuth = LOGIN-ONLY**: aktif hanya bila `AUTH_GOOGLE_ID`+`AUTH_GOOGLE_SECRET`.
+  Tak ada auto-register; `signInGuard` butuh `email_verified===true` DAN email sudah jadi
+  User aktif di DB. (Tak terkonfig di .env lokal → tombol Google tersembunyi.)
 
-### Dashboard (RBAC-aware, sudah jadi)
-- `src/app/dashboard/layout.tsx` (auth gate + shell), `page.tsx` (overview role-aware),
-  `siswa/page.tsx` (list), `siswa/[id]/page.tsx` (detail transparan), `agregat/page.tsx`
-  (dinas/superadmin), `error.tsx`.
-- `src/components/dashboard/DashboardShell.tsx` (sidebar/drawer/topbar/logout),
-  `ui.tsx` (RiskBadge/RiskDot/StatTile/PageHeader/EmptyState).
-- `src/lib/nav.ts` — `NAV_ITEMS`, `navForRole`, `canAccess`, `roleLabel`.
+### Dashboard (per-role, chart-rich) — sesi 2
+- `src/app/dashboard/page.tsx` mem-branch per role ke komponen khusus:
+  - **superadmin** -> `NationalOverview` (AGREGAT NASIONAL saja, TANPA PII siswa) + `PlatformHealth`.
+  - **dinas** -> `DinasDashboard` (regional ANONIM, scope `{sekolah:{wilayahId}}`).
+  - **kepsek** -> `SchoolDashboard` (scope `{sekolahId}`, boleh lihat siswa).
+  - **guru/bk** -> `GuruBKDashboard` (fokus aksi + grafik kecil sesuai peran).
+- Komponen di `src/components/dashboard/`: NationalOverview, DinasDashboard, SchoolDashboard,
+  GuruBKDashboard, PlatformHealth, RegionTable, Breadcrumbs, DashboardShell, ui.tsx.
+- **Drill-down superadmin** (breadcrumb Nasional>Provinsi>Kabupaten>Sekolah>Kelas>Siswa):
+  `/dashboard/wilayah/[provinsi]`, `/dashboard/kabupaten/[wilayahId]`, `/dashboard/sekolah/[id]`,
+  `/dashboard/sekolah/[id]/kelas/[kelasId]` (roster = superadmin-only krn tampil PII).
+- Superadmin platform pages: `/dashboard/admin/{tenant,users,users/baru,audit,security}`.
+- `src/lib/nav.ts` — NAV_ITEMS, navForRole (label per-role via labelByRole), canAccess
+  (visibilitas nav, BUKAN gerbang otorisasi), roleLabel.
+
+### Charts & analytics — sesi 2
+- **Recharts 2.15.4** (pinned). Client di `src/components/charts/recharts/`: RiskTrendLine,
+  RiskDonutChart, FactorBars, CategoryStackedBars, Bars(CategoryBars), SingleAreaChart,
+  theme.ts (warna brand+risiko, usePrefersReducedMotion via useSyncExternalStore, tooltipStyle).
+  SEMUA `'use client'` + role=img+aria-label + animasi gated reduced-motion. (Server-SVG lama dihapus.)
+- **`src/lib/analytics.ts`** (scope-aware, REAL): getKpis(+MoM), monthlyRiskTrend(12bln),
+  riskFactorBreakdown (agregat alasanJson.kode), riskDonut, riskByKelas, attendanceSummary,
+  priorityStudents, platformScale, riskByProvinsi/Kabupaten/Sekolah/KelasInSekolah (drill),
+  interventionByJenis/Trend.
+- **JANGAN buat** funnel/outcome/success-rate intervensi atau geo-heatmap — tak ada datanya.
+  NationalOverview tampilkan placeholder jujur.
 
 ### Scoring (rule-based)
-- `src/lib/scoring/`: `features.ts`, `buildInput.ts`, `rules.ts`, `explain.ts`,
-  `thresholds.ts`, `types.ts`.
-- `Risiko.alasanJson` = JSON `{ alasan: string[], saran: string[] }`.
-- `configVersion()` di `thresholds.ts` — HABIS DIPERBAIKI: dulu pakai
-  `JSON.stringify(t, Object.keys(t).sort())` (arg array = ALLOWLIST properti, bukan
-  pengurut) → key bersarang `bobot.*` ter-strip → ubah bobot tak ubah hash. Sekarang
-  pakai `stableStringify` deep. Jangan regресi ini.
+- `src/lib/scoring/`: features, buildInput, rules, explain, thresholds, types.
+- **`Risiko.alasanJson` = `{ alasan: AlasanItem[], saran: string[] }`**, `AlasanItem={kode,pesan,bobot}`.
+  Untuk teks alasan PAKAI `src/lib/parseAlasan.ts` (ekstrak `.pesan`). Bug P0 sesi 2: dulu
+  di-filter `typeof string` -> panel "alasan" selalu kosong. Jangan regresi.
+- `buildInput.ts` hitung `absensiPerPeriode` (tren kehadiran) dari absensi nyata.
+  Fitur disiplin/partisipasi/tugas/tinggal-kelas masih di-nol-kan (belum ada data) — terdokumentasi.
+- `configVersion()` pakai `stableStringify` deep. Jangan regresi ke `JSON.stringify(t, keys)`.
 
-### DB / seed
-- `prisma/seed.ts` — data sintetis Faker, deterministik. Email & password tiap role
-  dari env `SEED_EMAIL_*` / `SEED_PASSWORD_*` (fallback `<role>@demo.test` / `password123`).
-- `.env` (gitignored) saat ini: super=`superadmin@demo.test`/`superadmin123`,
-  dinas/kepsek/bk/guru = `<role>@demo.test` / `<role>123`, guru2=`guru2@demo.test`/`guru123`.
-- Re-seed: `npx tsx prisma/seed.ts` atau `npm run db:seed`.
+### DB / seed — PostgreSQL + PgBouncer (sesi 2)
+- Prisma dua URL: `DATABASE_URL` via PgBouncer (port 6432, WAJIB `?pgbouncer=true`),
+  `DIRECT_URL` langsung ke Postgres (utk migrate/seed; transaction-pool tak bisa migrasi).
+- Lokal: `docker compose up -d postgres pgbouncer`. **Port host 5432 sudah dipakai Postgres
+  lain di mesin ini** -> `.env` lokal DIRECT_URL port **55432** (`POSTGRES_HOST_PORT=55432`).
+  PgBouncer host 6432 -> container 5432.
+- Migrasi: `20260613114501_init_postgres` (+ partial-unique index isLatest ditambah manual),
+  `20260613140159_drop_kelas_walikelasid`.
+- `prisma/seed.ts` — sintetis Faker deterministik + **11 snapshot risiko historis** (isLatest=false)
+  -> tren 12 bulan & delta MoM jadi DATA NYATA. Email/password role dari env SEED_*.
+- Re-seed: `npm run db:seed` (kalau shell punya `DATABASE_URL=file:...` basi, override eksplisit).
 
 ---
 
@@ -147,9 +168,10 @@ Semua commit ada di branch `master` (lokal, **belum di-push** — user belum min
 - Import modul via alias `@/` (→ `src/`).
 - **TANPA Prisma/DB/network di unit test** — pakai pure function + dependency injection
   (lihat pola `tests/authCore.test.ts` ports, `tests/applySync.test.ts` SyncPort).
-- Saat ini **304 test / 0 fail**. File test: authCore, api, rules, rules-scenarios,
+- Saat ini **332 test / 0 fail**. File test: authCore, api, rules, rules-scenarios,
   features, buildInput, explain, thresholds, columnMap, parse, nav, rateLimit, rbac,
-  cleaning, crypto, envelope, applySync.
+  cleaning, envelope, applySync. (crypto.test.ts DIHAPUS — modul `crypto.ts` mati,
+  diganti `envelope.ts`+`siswaPII.ts`.)
 
 ---
 
@@ -220,9 +242,11 @@ purple/indigo gradient + Inter di mana-mana + centered hero + dual CTA simetris
   ≥2 momen asimetris/halaman; jangan ulang anatomi section beruntun.
 
 ### 6.5 BUKTI bahwa standar ini SUDAH diterapkan (jadikan contoh, jangan regресi)
-- Hero full-bleed (`src/components/landing/Hero.tsx`), FaktorRisiko (huruf A/B/C sebagai sistem,
-  bukan rainbow rail), DashboardPreview (dot+label, bukan pill berwarna), Dampak (hierarki heading>angka),
-  FAQ (`bg-slate-50` + section semantik), login split-screen, dashboard (RiskBadge ring-inset, StatTile dot).
+- Hero full-bleed (`src/components/landing/Hero.tsx`), FaktorRisiko, DashboardPreview,
+  Dampak, FAQ, login split-screen.
+- Dashboard per-role (sesi 2): NationalOverview/DinasDashboard/SchoolDashboard/GuruBKDashboard,
+  chart Recharts bermerk teal (`src/components/charts/recharts/*`), RegionTable drill-down,
+  Breadcrumbs. RiskBadge ring-inset, StatTile dot. SEMUA lolos react-doctor 100/100.
 - Saat kamu menyentuh UI baru, samakan kualitasnya dengan ini. Jika ragu: buka file referensi,
   jangan tebak.
 
@@ -236,21 +260,54 @@ purple/indigo gradient + Inter di mana-mana + centered hero + dual CTA simetris
 ## 7. CARA VERIFIKASI CEPAT
 
 ```bash
-npm test                      # 304 pass
+# DB lokal (sekali): port 5432 host bentrok -> override
+POSTGRES_HOST_PORT=55432 docker compose up -d postgres pgbouncer
+npm run db:migrate && npm run db:seed
+
+npm test                            # 332 pass (node:test, tanpa DB)
 npx tsc --noEmit -p tsconfig.json   # bersih
-npm run dev                   # dev server (sudah jalan di :3000 saat sesi ini)
-npm run build                 # BELUM dites sesi ini — WAJIB sebelum rilis
+npx react-doctor@latest             # WAJIB 100/100
+npm run build                       # butuh DATABASE_URL Postgres
+npm run dev                         # :3000
 ```
-Login demo (dev): buka `/login` → `guru@demo.test` / `guru123` (atau role lain di §4).
-Catatan: jika diarahkan balik ke /login, sesi 15-menit lapse — login ulang.
+Login demo: `superadmin@demo.test`/`superadmin123`, atau `dinas|kepsek|guru|bk@demo.test`
+/ `<role>123`. Sesi 15-menit lapse → login ulang.
+
+**⚠️ GOTCHA DEV-SERVER (penting saat verifikasi via browser/Playwright):**
+1. Shell punya `DATABASE_URL=file:./dev.db` BASI yang menimpa `.env` → dev/seed gagal
+   (Prisma butuh `postgresql://`). Jalankan dengan env bersih:
+   `env -u DATABASE_URL -u DIRECT_URL setsid bash -c '... npm run dev ...' </dev/null & disown`.
+2. `pkill -f "next dev"` di shell tool ikut membunuh proses tool itu sendiri (process group).
+3. `npm run build` menimpa `.next` → dev server lama 404 chunk. Restart dev setelah build.
+4. Playwright: klik submit form RSC sering tak memicu server action → login via
+   `form.requestSubmit()` lewat `browser_evaluate`.
 
 ---
 
 ## 8. KEPUTUSAN SADAR (jangan "perbaiki" tanpa baca)
 
-- Sisa warning react-doctor di `prisma/seed.ts` (sequential await, await-in-loop) +
-  `sharp` "unused" SENGAJA dibiarkan: seed butuh urutan FK/NISN deterministik;
-  `sharp` dipakai `next/image` di produksi (false positive).
-- `maxAge` sesi 15 menit memang pendek (keamanan data anak). Jangan naikkan tanpa diskusi.
-- Gambar hero lama (`public/images/hero-bg.jpg/.webp`) tak terpakai lagi — boleh dihapus
-  jika user setuju (belum dilakukan).
+- **Funnel/outcome/success-rate intervensi & geo-heatmap SENGAJA tidak dibangun**:
+  `Intervensi` cuma punya `jenis` (tak ada tahap/hasil), Wilayah/Sekolah tak punya lat/lng.
+  Membangunnya = mengarang data. Tunda sampai skema ditambah. Placeholder jujur sudah ada.
+- **`maxAge` sesi 15 menit** memang pendek (keamanan data anak). Jangan naikkan tanpa diskusi.
+- **Middleware WAJIB `authEdge`** (bukan `auth` penuh) — kalau diubah balik, redirect-loop
+  tiap pindah halaman kembali (Prisma di Edge). Lihat §4.
+- **`Siswa.sudahDropout` & `nonaktifSejak` DIPERTAHANKAN** walau belum dipakai UI
+  (intent retensi/compliance). `Kelas.waliKelasId` dihapus (orphan; wali via `User.kelasId`).
+- `prisma/seed.ts` sequential/await-in-loop SENGAJA (urutan FK + counter NISN deterministik) —
+  di-ignore di doctor.config.
+
+## 9. react-doctor config (`doctor.config.json`)
+
+Hanya berisi **false-positive terdokumentasi** (bukan sembunyikan masalah nyata):
+- `prisma/**`: `async-parallel` + `async-await-in-loop` (skrip seed FK-ordered, non-React).
+- `src/app/api/auth/logout/route.ts` + `intervensi/[id]/route.ts`: `async-parallel`
+  (`rateLimit(\`...${ctx.userId}\`)` memakai hasil `await requireContext()` — analyzer tak
+  lihat dependensi via template string; auth memang harus dulu).
+- `src/components/charts/recharts/**`: `prefer-tag-over-role` (role=img benar utk chart) +
+  `prefer-dynamic-import` (chart = konten utama halaman, eager wajar).
+- `deslop/unused-dependency`: `sharp` (dipakai `next/image` produksi, false positive).
+
+2 error "Unauthenticated server action" di `login/actions.ts` adalah FALSE POSITIVE
+terdokumentasi (login MEMANG endpoint anonim) — react-doctor sendiri menganjurkan tak
+menggerbang login. Skor tetap 100 karena sudah ditangani.
