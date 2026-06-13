@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import "@aejkatappaja/phantom-ui/ssr.css";
 
 export const metadata: Metadata = {
   title: "JagaSekolah — Sistem Peringatan Dini Putus Sekolah",
