@@ -1,7 +1,7 @@
 "use client";
 
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from "recharts";
-import { CHART, tooltipStyle, usePrefersReducedMotion } from "./theme";
+import { CHART, ChartTooltip, usePrefersReducedMotion, axisProps, yAxisProps, gridProps, ANIM_MS } from "./theme";
 
 export interface LineSeries {
   key: string;
@@ -14,13 +14,14 @@ export interface MultiLinePoint {
   [key: string]: string | number;
 }
 
-const PALETTE = ["#005D4C", "#ef4444", "#f59e0b", "#3b82f6", "#8b5cf6", "#0ea5e9", "#64748b"];
+// Palet kategorikal — teal brand dulu, lalu warna fungsional. TANPA ungu (anti-slop).
+const PALETTE = ["#005D4C", "#ef4444", "#f59e0b", "#0ea5e9", "#0d9488", "#64748b", "#b45309"];
 
 /** Multi-line untuk tren beberapa seri (mis. faktor risiko per bulan). */
 export function MultiLineChart({
   data,
   series,
-  height = 280,
+  height = 284,
   ariaLabel,
 }: {
   data: MultiLinePoint[];
@@ -33,12 +34,12 @@ export function MultiLineChart({
   return (
     <div role="img" aria-label={aria}>
       <ResponsiveContainer width="100%" height={height}>
-        <LineChart data={data} margin={{ top: 8, right: 12, bottom: 0, left: -12 }}>
-          <CartesianGrid stroke={CHART.grid} vertical={false} />
-          <XAxis dataKey="label" tick={{ fill: CHART.axis, fontSize: 11 }} axisLine={false} tickLine={false} />
-          <YAxis tick={{ fill: CHART.axis, fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} width={32} />
-          <Tooltip contentStyle={tooltipStyle} cursor={{ stroke: CHART.grid, strokeWidth: 2 }} />
-          <Legend wrapperStyle={{ fontSize: 12, paddingTop: 8 }} iconType="plainline" />
+        <LineChart data={data} margin={{ top: 8, right: 12, bottom: 0, left: -10 }}>
+          <CartesianGrid {...gridProps} />
+          <XAxis dataKey="label" {...axisProps} dy={4} minTickGap={16} />
+          <YAxis {...yAxisProps} />
+          <Tooltip content={<ChartTooltip />} cursor={{ stroke: CHART.axis, strokeWidth: 1, strokeDasharray: "4 4" }} />
+          <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 12, paddingTop: 10 }} />
           {series.map((s, i) => (
             <Line
               key={s.key}
@@ -46,9 +47,11 @@ export function MultiLineChart({
               dataKey={s.key}
               name={s.name}
               stroke={s.color || PALETTE[i % PALETTE.length]}
-              strokeWidth={2}
-              dot={{ r: 2 }}
+              strokeWidth={2.5}
+              dot={false}
+              activeDot={{ r: 5, strokeWidth: 2, stroke: "#fff" }}
               isAnimationActive={!reduced}
+              animationDuration={ANIM_MS}
             />
           ))}
         </LineChart>

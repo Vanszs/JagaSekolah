@@ -1,16 +1,7 @@
 "use client";
 
-import {
-  ResponsiveContainer,
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-} from "recharts";
-import { CHART, tooltipStyle, usePrefersReducedMotion } from "./theme";
+import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from "recharts";
+import { CHART, ChartTooltip, usePrefersReducedMotion, axisProps, yAxisProps, gridProps, ANIM_MS } from "./theme";
 
 export interface TrendPoint {
   label: string;
@@ -19,11 +10,17 @@ export interface TrendPoint {
   hijau: number;
 }
 
-/** Tren risiko 12 bulan (3 garis). Interaktif: tooltip per bulan. */
+const SERIES = [
+  { key: "merah", name: "Risiko tinggi", color: CHART.merah },
+  { key: "kuning", name: "Waspada", color: CHART.kuning },
+  { key: "hijau", name: "Aman", color: CHART.hijau },
+] as const;
+
+/** Tren risiko 12 bulan (3 garis halus). Tooltip kustom, dot hanya saat hover. */
 export function RiskTrendLine({ data }: { data: TrendPoint[] }) {
   const reduced = usePrefersReducedMotion();
-  const last = data.at(-1);
   const first = data.at(0);
+  const last = data.at(-1);
   const aria =
     first && last
       ? `Tren risiko 12 bulan. Risiko tinggi ${first.merah} → ${last.merah}, waspada ${first.kuning} → ${last.kuning}, aman ${first.hijau} → ${last.hijau}.`
@@ -31,16 +28,27 @@ export function RiskTrendLine({ data }: { data: TrendPoint[] }) {
 
   return (
     <div role="img" aria-label={aria}>
-      <ResponsiveContainer width="100%" height={260}>
-        <LineChart data={data} margin={{ top: 8, right: 12, bottom: 0, left: -12 }}>
-          <CartesianGrid stroke={CHART.grid} vertical={false} />
-          <XAxis dataKey="label" tick={{ fill: CHART.axis, fontSize: 11 }} axisLine={false} tickLine={false} />
-          <YAxis tick={{ fill: CHART.axis, fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} width={32} />
-          <Tooltip contentStyle={tooltipStyle} cursor={{ stroke: CHART.grid, strokeWidth: 2 }} />
-          <Legend iconType="plainline" wrapperStyle={{ fontSize: 12, paddingTop: 8 }} />
-          <Line type="monotone" dataKey="merah" name="Risiko tinggi" stroke={CHART.merah} strokeWidth={2} dot={{ r: 2.5 }} isAnimationActive={!reduced} />
-          <Line type="monotone" dataKey="kuning" name="Waspada" stroke={CHART.kuning} strokeWidth={2} dot={{ r: 2.5 }} isAnimationActive={!reduced} />
-          <Line type="monotone" dataKey="hijau" name="Aman" stroke={CHART.hijau} strokeWidth={2} dot={{ r: 2.5 }} isAnimationActive={!reduced} />
+      <ResponsiveContainer width="100%" height={264}>
+        <LineChart data={data} margin={{ top: 8, right: 12, bottom: 0, left: -10 }}>
+          <CartesianGrid {...gridProps} />
+          <XAxis dataKey="label" {...axisProps} dy={4} minTickGap={16} />
+          <YAxis {...yAxisProps} />
+          <Tooltip content={<ChartTooltip />} cursor={{ stroke: CHART.axis, strokeWidth: 1, strokeDasharray: "4 4" }} />
+          <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 12, paddingTop: 10 }} />
+          {SERIES.map((s) => (
+            <Line
+              key={s.key}
+              type="monotone"
+              dataKey={s.key}
+              name={s.name}
+              stroke={s.color}
+              strokeWidth={2.5}
+              dot={false}
+              activeDot={{ r: 5, strokeWidth: 2, stroke: "#fff" }}
+              isAnimationActive={!reduced}
+              animationDuration={ANIM_MS}
+            />
+          ))}
         </LineChart>
       </ResponsiveContainer>
     </div>

@@ -1,19 +1,15 @@
 "use client";
 
-import { ResponsiveContainer, BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip } from "recharts";
-import { CHART, tooltipStyle, usePrefersReducedMotion } from "./theme";
+import { ResponsiveContainer, BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip, LabelList } from "recharts";
+import { CHART, ChartTooltip, usePrefersReducedMotion, axisProps, ANIM_MS } from "./theme";
 
 export interface HBarDatum {
   label: string;
   value: number;
-  /** Warna per-bar opsional (mis. merah utk %risiko tinggi). */
   color?: string;
 }
 
-/**
- * Horizontal bar ranking (mis. top provinsi, cakupan per wilayah, top pelaku).
- * Mendukung warna per-bar + formatter nilai (angka/persen).
- */
+/** Horizontal bar ranking (top provinsi, cakupan, top pelaku). Bar membulat + label nilai. */
 export function HorizontalBarChart({
   data,
   seriesName,
@@ -23,33 +19,26 @@ export function HorizontalBarChart({
 }: {
   data: HBarDatum[];
   seriesName: string;
-  /** Akhiran nilai pada aria/tooltip, mis. "%". */
   unit?: string;
   height?: number;
   barColor?: string;
 }) {
   const reduced = usePrefersReducedMotion();
   const aria = `${seriesName}: ${data.map((d) => `${d.label} ${d.value}${unit}`).join(", ")}`;
-  const h = height ?? Math.max(140, data.length * 38);
+  const h = height ?? Math.max(150, data.length * 42);
   return (
     <div role="img" aria-label={aria}>
       <ResponsiveContainer width="100%" height={h}>
-        <BarChart data={data} layout="vertical" margin={{ top: 4, right: 24, bottom: 4, left: 8 }}>
-          <CartesianGrid stroke={CHART.grid} horizontal={false} />
-          <XAxis
-            type="number"
-            tick={{ fill: CHART.axis, fontSize: 11 }}
-            axisLine={false}
-            tickLine={false}
-            allowDecimals={false}
-            unit={unit}
-          />
+        <BarChart data={data} layout="vertical" margin={{ top: 4, right: 36, bottom: 4, left: 8 }} barCategoryGap="28%">
+          <CartesianGrid stroke={CHART.grid} strokeDasharray="4 4" horizontal={false} />
+          <XAxis type="number" {...axisProps} allowDecimals={false} unit={unit} hide />
           <YAxis type="category" dataKey="label" tick={{ fill: CHART.label, fontSize: 12 }} axisLine={false} tickLine={false} width={140} />
-          <Tooltip contentStyle={tooltipStyle} cursor={{ fill: "rgba(0,93,76,0.04)" }} formatter={(v) => [`${Number(v)}${unit}`, seriesName]} />
-          <Bar dataKey="value" name={seriesName} radius={[0, 4, 4, 0]} isAnimationActive={!reduced} barSize={18}>
+          <Tooltip content={<ChartTooltip unit={unit} />} cursor={{ fill: "rgba(0,93,76,0.05)" }} />
+          <Bar dataKey="value" name={seriesName} radius={[0, 6, 6, 0]} isAnimationActive={!reduced} animationDuration={ANIM_MS} barSize={20}>
             {data.map((d, i) => (
               <Cell key={`${d.label}-${i}`} fill={d.color ?? barColor} />
             ))}
+            <LabelList dataKey="value" position="right" formatter={(v: React.ReactNode) => `${Number(v)}${unit}`} className="fill-slate-500" style={{ fontSize: 12, fontVariantNumeric: "tabular-nums" }} />
           </Bar>
         </BarChart>
       </ResponsiveContainer>
