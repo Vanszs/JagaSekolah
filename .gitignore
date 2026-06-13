@@ -1,0 +1,25 @@
+# deps
+node_modules/
+# next
+.next/
+out/
+# env (JANGAN commit kredensial)
+.env
+.env*.local
+# db (JANGAN commit data siswa asli)
+*.db
+*.sqlite
+*.sqlite3
+prisma/dev.db*
+# backup (berisi PII)
+backups/
+# misc
+.DS_Store
+*.log
+coverage/
+# python ml-service
+ml-service/__pycache__/
+ml-service/*.pkl
+ml-service/.venv/
+# typescript incremental
+*.tsbuildinfo

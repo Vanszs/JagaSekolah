@@ -1,0 +1,255 @@
+// JagaSekolah - Prisma schema (MULTI-TENANT / Opsi B)
+// Pemerintah/Dinas pegang sistem terpusat; tiap sekolah login & hanya akses datanya sendiri.
+// Dinas hanya melihat AGREGAT ANONIM per wilayah.
+// MVP: SQLite. Skala: ganti provider ke postgresql.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  superadmin
+  dinas
+  kepsek
+  guru
+  bk
+}
+
+enum AbsensiStatus {
+  hadir
+  izin
+  sakit
+  alpa
+  telat
+}
+
+enum KategoriRisiko {
+  hijau
+  kuning
+  merah
+}
+
+enum SumberRisiko {
+  rule
+  ml
+}
+
+model Wilayah {
+  id        String    @id @default(cuid())
+  provinsi  String
+  kabupaten String
+  sekolah   Sekolah[]
+  users     User[]
+
+  @@unique([provinsi, kabupaten])
+}
+
+model Sekolah {
+  id        String  @id @default(cuid())
+  npsn      String  @unique
+  nama      String
+  wilayahId String
+  wilayah   Wilayah @relation(fields: [wilayahId], references: [id])
+  kelas     Kelas[]
+  users     User[]
+  siswa     Siswa[]
+
+  @@index([wilayahId])
+}
+
+model User {
+  id           String   @id @default(cuid())
+  nama         String
+  email        String   @unique
+  passwordHash String
+  role         Role     @default(guru)
+  // Tenant scoping
+  sekolahId    String?
+  sekolah      Sekolah? @relation(fields: [sekolahId], references: [id])
+  wilayahId    String?
+  wilayah      Wilayah? @relation(fields: [wilayahId], references: [id])
+  kelasId      String?
+  kelas        Kelas?   @relation("WaliKelas", fields: [kelasId], references: [id])
+  // Session revocation: token dengan tokenVersion != ini dianggap invalid
+  tokenVersion Int      @default(0)
+  aktif        Boolean  @default(true)
+
+  intervensi Intervensi[]
+  auditLogs  AuditLog[]
+  createdAt  DateTime     @default(now())
+
+  @@index([sekolahId])
+  @@index([wilayahId])
+}
+
+model Kelas {
+  id          String  @id @default(cuid())
+  sekolahId   String
+  sekolah     Sekolah @relation(fields: [sekolahId], references: [id])
+  nama        String
+  waliKelasId String?
+  wali        User[]  @relation("WaliKelas")
+  siswa       Siswa[]
+
+  @@unique([sekolahId, nama])
+  @@index([sekolahId])
+}
+
+model Siswa {
+  id           String  @id @default(cuid())
+  nisn         String  @unique
+  nama         String
+  sekolahId    String
+  sekolah      Sekolah @relation(fields: [sekolahId], references: [id])
+  kelasId      String
+  kelas        Kelas   @relation(fields: [kelasId], references: [id])
+  jenisKelamin String?
+  // PII sensitif - DISIMPAN TERENKRIPSI (envelope: data key per-record + master key).
+  statusEkonomiEnc  String?
+  penerimaKip       Boolean @default(false)
+  jarakKm           Float?
+  statusKeluargaEnc String?
+  statusOrtuEnc     String?
+  // id data-key (envelope) yang dipakai untuk PII record ini (key rotation aware)
+  dekId             String?
+  sudahDropout      Boolean @default(false)
+  // Compliance: persetujuan ortu (UU PDP data anak)
+  consentStatus     ConsentStatus @default(pending)
+  // Retention: jejak waktu untuk purge
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  // siswa nonaktif (lulus/pindah) - dasar retensi
+  nonaktifSejak     DateTime?
+
+  absensi    Absensi[]
+  nilai      Nilai[]
+  risiko     Risiko[]
+  intervensi Intervensi[]
+  consent    Consent[]
+
+  @@index([sekolahId])
+  @@index([kelasId])
+  @@index([sekolahId, kelasId])
+  @@index([consentStatus])
+}
+
+enum ConsentStatus {
+  pending  // belum ada persetujuan -> data tidak boleh diproses utk scoring
+  granted  // disetujui ortu/wali
+  revoked  // dicabut -> hentikan pemrosesan
+}
+
+// Catatan persetujuan ortu/wali (audit trail consent)
+model Consent {
+  id          String        @id @default(cuid())
+  siswaId     String
+  siswa       Siswa         @relation(fields: [siswaId], references: [id], onDelete: Cascade)
+  status      ConsentStatus
+  oleh        String        // nama ortu/wali pemberi persetujuan
+  hubungan    String        // ayah/ibu/wali
+  metode      String        // tatap_muka / digital / surat
+  catatan     String?
+  dibuatOleh  String        // userId petugas yang mencatat
+  createdAt   DateTime      @default(now())
+
+  @@index([siswaId, createdAt])
+}
+
+// Envelope encryption: master key membungkus data-key. Rotasi tanpa re-encrypt seluruh DB.
+model EncryptionKey {
+  id            String   @id @default(cuid())
+  // data key terenkripsi oleh master key (wrapped DEK)
+  wrappedKey    String
+  masterKeyId   String   // id master key yang membungkus (untuk rotasi)
+  aktif         Boolean  @default(true)
+  createdAt     DateTime @default(now())
+
+  @@index([aktif])
+}
+
+model Absensi {
+  id      String        @id @default(cuid())
+  siswaId String
+  siswa   Siswa         @relation(fields: [siswaId], references: [id], onDelete: Cascade)
+  tanggal DateTime
+  status  AbsensiStatus
+
+  @@index([siswaId, tanggal])
+  @@index([siswaId, status])
+}
+
+model Nilai {
+  id      String @id @default(cuid())
+  siswaId String
+  siswa   Siswa  @relation(fields: [siswaId], references: [id], onDelete: Cascade)
+  mapel   String
+  periode String
+  nilai   Float
+  kkm     Float  @default(70)
+
+  @@index([siswaId, periode])
+}
+
+model Risiko {
+  id            String         @id @default(cuid())
+  siswaId       String
+  siswa         Siswa          @relation(fields: [siswaId], references: [id], onDelete: Cascade)
+  sekolahId     String
+  tanggalHitung DateTime       @default(now())
+  kategori      KategoriRisiko
+  skor          Float
+  alasanJson    String
+  sumber        SumberRisiko   @default(rule)
+  configVersion String
+  // Snapshot terkini: hanya 1 record isLatest=true per siswa (untuk agregasi benar)
+  isLatest      Boolean        @default(true)
+
+  @@index([siswaId, tanggalHitung])
+  @@index([sekolahId, kategori, isLatest])
+  @@index([siswaId, isLatest])
+}
+
+model Intervensi {
+  id         String    @id @default(cuid())
+  siswaId    String
+  siswa      Siswa     @relation(fields: [siswaId], references: [id], onDelete: Cascade)
+  sekolahId  String
+  tanggal    DateTime  @default(now())
+  jenis      String
+  catatan    String
+  olehUserId String
+  oleh       User      @relation(fields: [olehUserId], references: [id])
+  version    Int       @default(1)
+  deletedAt  DateTime?
+
+  @@index([siswaId])
+  @@index([sekolahId])
+}
+
+model SyncLog {
+  id             String   @id @default(cuid())
+  idempotencyKey String   @unique
+  sekolahId      String?
+  status         String
+  detailJson     String?
+  createdAt      DateTime @default(now())
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  sekolahId String?
+  aksi      String
+  target    String
+  ip        String?
+  timestamp DateTime @default(now())
+
+  @@index([userId, timestamp])
+  @@index([sekolahId, timestamp])
+}

@@ -1,0 +1,24 @@
+services:
+  app:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=file:./dev.db
+      - AUTH_SECRET=${AUTH_SECRET:-demo-secret-ganti-di-produksi}
+      - AUTH_URL=http://localhost:3000
+      - ML_SERVICE_URL=${ML_SERVICE_URL:-}
+    volumes:
+      - jagasekolah-data:/app/prisma
+    restart: unless-stopped
+
+  # FASE 2 (opsional) - aktifkan dengan: docker compose --profile ml up
+  ml-service:
+    build: ./ml-service
+    profiles: ["ml"]
+    ports:
+      - "8001:8001"
+    restart: unless-stopped
+
+volumes:
+  jagasekolah-data:
