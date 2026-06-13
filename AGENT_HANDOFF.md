@@ -75,13 +75,19 @@ Semua commit ada di branch `master` (lokal, **belum di-push** — user belum min
   belum tuntas** (data seed termuat sangat cepat → skeleton hanya flash; throttle
   network untuk melihatnya, atau cek route lambat).
 
-### ⚠️ YANG MASIH HARUS DILAKUKAN
-1. **Commit** perubahan 3a + 3b (auth + phantom-ui). Saran pesan: lihat pola commit di atas.
-2. (Opsional, diminta user "terutama auth") tambah skeleton phantom-ui ke **pending
-   state form login** — saat ini login pakai `useFormStatus` spinner; bisa diperkaya.
-3. Verifikasi visual skeleton phantom-ui (throttle network di /dashboard).
-4. **Production build belum dijalankan** — `npm run build` untuk pastikan web-component
-   (Lit) tidak bentrok dgn RSC/SSR boundary. Lakukan sebelum anggap selesai.
+### ✅ SUDAH SELESAI & DI-COMMIT (update terakhir)
+- `3c3f5bf` authCore extract + 30 auth test.
+- `de9fc3a` phantom-ui skeleton (Phantom.tsx, d.ts, ssr.css, 3 loading.tsx).
+- `7b6865f` AGENT_HANDOFF.md ini.
+- **`npm run build` SUDAH dijalankan → sukses** (semua route compile, web-component
+  Lit aman dgn RSC/SSR, tanpa error). 304 test pass. `tsc` bersih. Working tree clean.
+
+### ⚠️ SISA (opsional / belum dikerjakan)
+1. (Opsional) Perkaya pending-state form login dgn skeleton phantom-ui — sekarang
+   pakai `useFormStatus` spinner; sudah cukup, tinggal preferensi.
+2. (Opsional) Verifikasi VISUAL skeleton phantom-ui dgn throttle network di /dashboard
+   (build & runtime sudah OK; skeleton hanya flash karena data seed cepat).
+3. **Belum di-`git push`** — semua commit masih lokal di `master`. Push bila user minta.
 
 ---
 
