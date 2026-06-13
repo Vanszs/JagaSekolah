@@ -68,9 +68,9 @@ function Item({ q, a }: { q: string; a: string }) {
 
 export default function FAQ() {
   return (
-    <section id="faq" className="py-20 bg-white border-t border-slate-200/70">
-      <div className="max-w-3xl mx-auto px-6 lg:px-8">
-        <SectionHeading title="Pertanyaan yang sering muncul" />
+    <section id="faq" className="border-t border-slate-200 bg-slate-50 py-24">
+      <div className="mx-auto max-w-3xl px-6 lg:px-8">
+        <SectionHeading eyebrow="Pertanyaan Umum" title="Pertanyaan yang sering muncul" />
         <div className="space-y-3">
           {faqs.map((f, i) => (
             <Reveal key={f.q} delay={i * 0.06}>

@@ -11,26 +11,31 @@ const metrik = [
 export default function Dampak() {
   return (
     <section id="dampak" className="border-t border-slate-200/70">
-      {/* Stats band — full-bleed rhythm break (reference flow #4) */}
-      <div className="bg-[#005D4C] py-16">
-        <div className="max-w-6xl mx-auto px-6 lg:px-8">
-          <Reveal className="max-w-2xl mb-10">
-            <h2 className="font-display font-bold text-[1.75rem] sm:text-[2.25rem] leading-tight tracking-tight text-white">
+      {/* Stats band — full-bleed rhythm break */}
+      <div className="bg-[#005D4C] py-20">
+        <div className="mx-auto max-w-6xl px-6 lg:px-8">
+          {/* Heading = elemen dominan */}
+          <Reveal>
+            <h2 className="font-display text-[1.75rem] font-bold leading-[1.1] tracking-tight text-white sm:text-[2.5rem] lg:whitespace-nowrap">
               Deteksi lebih awal = peluang lebih besar
             </h2>
-            <p className="mt-3 text-base sm:text-lg leading-relaxed text-teal-50/90">
-              Tujuannya satu: menahan anak tetap di bangku sekolah. Setiap intervensi tepat waktu bisa mengubah arah masa depan seorang anak.
+            <p className="mt-4 max-w-prose text-base leading-relaxed text-teal-50/80 sm:text-lg">
+              Tujuannya satu: menahan anak tetap di bangku sekolah. Setiap intervensi tepat waktu bisa
+              mengubah arah masa depan seorang anak.
             </p>
           </Reveal>
 
-          <dl className="grid grid-cols-1 sm:grid-cols-3 gap-8 sm:gap-6">
+          {/* Metrik = subordinat: angka lebih kecil dari heading, dipisah garis halus */}
+          <dl className="mt-12 grid grid-cols-1 gap-px overflow-hidden rounded-xl bg-white/10 sm:grid-cols-3">
             {metrik.map((m, i) => (
               <Reveal key={m.label} delay={i * 0.1}>
-                <div className="border-l-2 border-emerald-300/40 pl-5">
+                <div className="h-full bg-[#005D4C] p-6">
                   <dt className="sr-only">{m.label}</dt>
-                  <dd className="font-display font-bold text-4xl text-white mb-1.5 tabular-nums">{m.angka}</dd>
-                  <p className="font-display font-semibold text-sm text-emerald-100 mb-1">{m.label}</p>
-                  <p className="text-[13px] text-teal-50/70 leading-relaxed">{m.sub}</p>
+                  <dd className="font-display text-2xl font-bold tabular-nums text-white sm:text-[1.75rem]">
+                    {m.angka}
+                  </dd>
+                  <p className="mt-2 text-sm font-semibold text-emerald-100">{m.label}</p>
+                  <p className="mt-1 text-[13px] leading-relaxed text-teal-50/70">{m.sub}</p>
                 </div>
               </Reveal>
             ))}
@@ -38,18 +43,24 @@ export default function Dampak() {
         </div>
       </div>
 
-      {/* Single big testimonial — reference flow #6 */}
+      {/* Single big testimonial */}
       <div className="bg-white py-24">
-        <div className="max-w-3xl mx-auto px-6 lg:px-8 text-center">
+        <div className="mx-auto max-w-3xl px-6 text-center lg:px-8">
           <Reveal>
             <figure>
-              <blockquote className="font-display font-medium text-2xl sm:text-[1.75rem] leading-snug text-[#0F172A] tracking-tight">
-                “Dulu kami baru tahu seorang anak berhenti saat namanya hilang dari absen. Dengan deteksi dini, kami bisa bertindak jauh sebelum itu terjadi.”
+              <blockquote className="font-display text-2xl font-medium leading-snug tracking-tight text-[#0F172A] sm:text-[1.75rem] text-balance">
+                &ldquo;Dulu kami baru tahu seorang anak berhenti saat namanya hilang dari absen. Dengan
+                deteksi dini, kami bisa bertindak jauh sebelum itu terjadi.&rdquo;
               </blockquote>
               <figcaption className="mt-8 flex items-center justify-center gap-3">
-                <span className="w-10 h-10 rounded-full bg-emerald-50 ring-1 ring-emerald-100 flex items-center justify-center font-display font-bold text-[#005D4C]" aria-hidden="true">W</span>
+                <span
+                  className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-50 font-display font-bold text-[#005D4C] ring-1 ring-emerald-100"
+                  aria-hidden="true"
+                >
+                  W
+                </span>
                 <span className="text-left">
-                  <span className="block font-display font-semibold text-sm text-[#0F172A]">Wali Kelas</span>
+                  <span className="block font-display text-sm font-semibold text-[#0F172A]">Wali Kelas</span>
                   <span className="block text-xs text-slate-500">SMP di daerah 3T · skenario ilustratif</span>
                 </span>
               </figcaption>
@@ -58,7 +69,7 @@ export default function Dampak() {
 
           <Reveal delay={0.15} className="mt-10">
             <p className="text-xs text-slate-400">
-              *Metrik & kutipan bersifat ilustratif untuk demo. Angka final mengikuti hasil uji coba lapangan.
+              *Metrik &amp; kutipan bersifat ilustratif untuk demo. Angka final mengikuti hasil uji coba lapangan.
             </p>
           </Reveal>
         </div>

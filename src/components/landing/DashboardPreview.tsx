@@ -2,37 +2,45 @@
 
 import { Reveal } from "./Reveal";
 
-const rows = [
+type Kat = "merah" | "kuning" | "hijau";
+
+const rows: { nama: string; kelas: string; kat: Kat; skor: number; alasan: string }[] = [
   { nama: "Ahmad Fauzi", kelas: "VIII-A", kat: "merah", skor: 78, alasan: "Alpa 4 hari beruntun · 3 mapel < KKM" },
-  { nama: "Siti Nurhaliza", kelas: "VIII-A", kat: "kuning", skor: 45, alasan: "Kehadiran menurun · penerima KIP" },
   { nama: "Rizki Pratama", kelas: "VIII-B", kat: "merah", skor: 71, alasan: "Nilai turun 18 poin · jarak jauh" },
-  { nama: "Dewi Lestari", kelas: "VIII-B", kat: "hijau", skor: 12, alasan: "Stabil — pemantauan rutin" },
+  { nama: "Siti Nurhaliza", kelas: "VIII-A", kat: "kuning", skor: 45, alasan: "Kehadiran menurun · penerima KIP" },
   { nama: "Budi Santoso", kelas: "IX-A", kat: "kuning", skor: 38, alasan: "Tugas tidak dikumpulkan" },
+  { nama: "Dewi Lestari", kelas: "VIII-B", kat: "hijau", skor: 12, alasan: "Stabil — pemantauan rutin" },
 ];
 
-const badge: Record<string, string> = {
-  merah: "bg-red-100 text-red-700 border-red-200",
-  kuning: "bg-amber-100 text-amber-800 border-amber-200",
-  hijau: "bg-emerald-100 text-emerald-800 border-emerald-200",
+const status: Record<Kat, { dot: string; label: string; bar: string }> = {
+  merah: { dot: "bg-red-500", label: "Merah", bar: "bg-red-500" },
+  kuning: { dot: "bg-amber-500", label: "Kuning", bar: "bg-amber-500" },
+  hijau: { dot: "bg-emerald-500", label: "Hijau", bar: "bg-emerald-500" },
 };
-const bar: Record<string, string> = { merah: "bg-red-500", kuning: "bg-amber-400", hijau: "bg-emerald-500" };
+
+const ringkasan = [
+  { n: 2, l: "Merah", dot: "bg-red-500" },
+  { n: 2, l: "Kuning", dot: "bg-amber-500" },
+  { n: 1, l: "Hijau", dot: "bg-emerald-500" },
+];
 
 export default function DashboardPreview() {
   return (
-    <section id="dashboard" className="py-28 bg-white border-t border-slate-200/70">
-      <div className="max-w-6xl mx-auto px-6 lg:px-8">
+    <section id="dashboard" className="border-t border-slate-200/70 bg-white py-28">
+      <div className="mx-auto max-w-6xl px-6 lg:px-8">
         <div className="grid gap-10 lg:grid-cols-[2fr_3fr] lg:items-center">
           {/* Penjelasan kiri */}
           <Reveal>
-            <span className="inline-flex items-center gap-2 font-mono text-xs font-semibold uppercase tracking-wide mb-4 text-[#005D4C]">
+            <span className="mb-4 inline-flex items-center gap-2 font-mono text-xs font-semibold uppercase tracking-wide text-[#005D4C]">
               <span className="h-px w-6 bg-[#005D4C]/40" aria-hidden="true" />
               Dashboard
             </span>
-            <h2 className="font-display font-bold text-[2rem] sm:text-[2.5rem] leading-[1.15] tracking-tight text-[#0F172A]">
+            <h2 className="font-display text-[2rem] font-bold leading-[1.15] tracking-tight text-[#0F172A] sm:text-[2.5rem]">
               Daftar siswa berisiko, lengkap dengan alasannya
             </h2>
-            <p className="mt-4 text-base sm:text-lg leading-relaxed text-slate-600 max-w-prose">
-              Bukan sekadar label. Setiap skor disertai alasan yang transparan — alpa beruntun, nilai turun, jarak jauh — supaya wali kelas tahu harus bertindak apa, bukan sekadar tahu siapa.
+            <p className="mt-4 max-w-prose text-base leading-relaxed text-slate-600 sm:text-lg">
+              Bukan sekadar label. Setiap skor disertai alasan yang transparan — alpa beruntun, nilai
+              turun, jarak jauh — supaya wali kelas tahu harus bertindak apa, bukan sekadar tahu siapa.
             </p>
             <ul className="mt-6 space-y-3">
               {[
@@ -41,7 +49,7 @@ export default function DashboardPreview() {
                 "Urut otomatis dari risiko tertinggi",
               ].map((t) => (
                 <li key={t} className="flex items-start gap-2.5 text-[15px] text-slate-700">
-                  <span className="mt-2 w-1.5 h-1.5 rounded-full bg-[#005D4C] shrink-0" aria-hidden="true" />
+                  <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#005D4C]" aria-hidden="true" />
                   {t}
                 </li>
               ))}
@@ -50,58 +58,64 @@ export default function DashboardPreview() {
 
           {/* Tabel kanan — elemen dominan */}
           <Reveal delay={0.1}>
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-xl shadow-slate-200/50 overflow-hidden">
-              <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 bg-slate-50/70">
-                <div className="flex items-center gap-2">
-                  <span className="w-3 h-3 rounded-full bg-red-400" aria-hidden="true" />
-                  <span className="w-3 h-3 rounded-full bg-amber-400" aria-hidden="true" />
-                  <span className="w-3 h-3 rounded-full bg-emerald-400" aria-hidden="true" />
-                  <span className="ml-3 font-display font-semibold text-sm text-slate-700">Wali Kelas — VIII-A</span>
+            <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+              {/* Header aplikasi — bersih, tanpa chrome mac */}
+              <div className="flex items-center justify-between border-b border-slate-100 px-5 py-3.5">
+                <div className="flex items-center gap-2.5">
+                  <span className="font-display text-sm font-semibold text-[#0F172A]">Wali Kelas — VIII-A</span>
+                  <span className="rounded-md bg-slate-100 px-1.5 py-0.5 font-mono text-[10px] font-medium uppercase tracking-wide text-slate-500">
+                    Demo
+                  </span>
                 </div>
-                <span className="text-[11px] font-mono uppercase tracking-wider text-slate-400">Demo</span>
-              </div>
-
-              <div className="grid grid-cols-3 divide-x divide-slate-100 border-b border-slate-100">
-                {[
-                  { n: 2, l: "Merah", c: "text-red-600" },
-                  { n: 2, l: "Kuning", c: "text-amber-600" },
-                  { n: 1, l: "Hijau", c: "text-emerald-600" },
-                ].map((s) => (
-                  <div key={s.l} className="px-5 py-4 text-center">
-                    <div className={`font-display font-bold text-2xl ${s.c}`}>{s.n}</div>
-                    <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">{s.l}</div>
-                  </div>
-                ))}
+                {/* Ringkasan inline: dot + angka */}
+                <dl className="flex items-center gap-4">
+                  {ringkasan.map((s) => (
+                    <div key={s.l} className="flex items-center gap-1.5">
+                      <span className={`h-2 w-2 rounded-full ${s.dot}`} aria-hidden="true" />
+                      <dt className="sr-only">{s.l}</dt>
+                      <dd className="text-xs font-semibold tabular-nums text-slate-600">{s.n}</dd>
+                    </div>
+                  ))}
+                </dl>
               </div>
 
               <div className="overflow-x-auto">
-                <table className="w-full text-sm min-w-[520px]">
-                  <thead className="bg-slate-50/70 text-slate-500 text-[11px] uppercase tracking-wide">
+                <table className="w-full min-w-[520px] text-sm">
+                  <thead className="text-[11px] uppercase tracking-wide text-slate-400">
                     <tr>
-                      <th scope="col" className="text-left px-5 py-3 font-semibold">Nama</th>
-                      <th scope="col" className="text-left px-5 py-3 font-semibold">Risiko</th>
-                      <th scope="col" className="text-left px-5 py-3 font-semibold w-36">Skor</th>
-                      <th scope="col" className="text-left px-5 py-3 font-semibold">Alasan utama</th>
+                      <th scope="col" className="px-5 py-3 text-left font-medium">Nama</th>
+                      <th scope="col" className="px-5 py-3 text-left font-medium">Risiko</th>
+                      <th scope="col" className="w-36 px-5 py-3 text-left font-medium">Skor</th>
+                      <th scope="col" className="px-5 py-3 text-left font-medium">Alasan utama</th>
                     </tr>
                   </thead>
-                  <tbody>
-                    {rows.map((r) => (
-                      <tr key={r.nama} className="border-t border-slate-100 hover:bg-slate-50/70">
-                        <td className="px-5 py-3 font-semibold text-[#0F172A] whitespace-nowrap">{r.nama}</td>
-                        <td className="px-5 py-3">
-                          <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-full border capitalize ${badge[r.kat]}`}>{r.kat}</span>
-                        </td>
-                        <td className="px-5 py-3">
-                          <div className="flex items-center gap-2">
-                            <div className="flex-1 h-1.5 rounded-full bg-slate-100 overflow-hidden max-w-[60px]">
-                              <div className={`h-full rounded-full ${bar[r.kat]}`} style={{ width: `${r.skor}%` }} />
+                  <tbody className="divide-y divide-slate-100">
+                    {rows.map((r) => {
+                      const st = status[r.kat];
+                      return (
+                        <tr key={r.nama} className="transition-colors hover:bg-slate-50/70">
+                          <td className="whitespace-nowrap px-5 py-3.5">
+                            <span className="font-semibold text-[#0F172A]">{r.nama}</span>
+                            <span className="ml-2 text-xs text-slate-400">{r.kelas}</span>
+                          </td>
+                          <td className="px-5 py-3.5">
+                            <span className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-600">
+                              <span className={`h-2 w-2 rounded-full ${st.dot}`} aria-hidden="true" />
+                              {st.label}
+                            </span>
+                          </td>
+                          <td className="px-5 py-3.5">
+                            <div className="flex items-center gap-2">
+                              <div className="h-1.5 max-w-[60px] flex-1 overflow-hidden rounded-full bg-slate-100">
+                                <div className={`h-full rounded-full ${st.bar}`} style={{ width: `${r.skor}%` }} />
+                              </div>
+                              <span className="text-xs font-semibold tabular-nums text-slate-700">{r.skor}</span>
                             </div>
-                            <span className="font-semibold text-slate-700 text-xs tabular-nums">{r.skor}</span>
-                          </div>
-                        </td>
-                        <td className="px-5 py-3 text-slate-500 text-xs">{r.alasan}</td>
-                      </tr>
-                    ))}
+                          </td>
+                          <td className="px-5 py-3.5 text-xs text-slate-500">{r.alasan}</td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
