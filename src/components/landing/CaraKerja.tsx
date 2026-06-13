@@ -22,21 +22,28 @@ export default function CaraKerja() {
           desc="Alur yang ramah guru — fokus pada deteksi dini dan intervensi, bukan menambah pekerjaan administratif."
         />
 
-        <ol className="relative grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-          <div className="hidden lg:block absolute top-8 left-[12%] right-[12%] h-px bg-emerald-200/70" aria-hidden="true" />
+        <ol className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-4">
           {langkah.map((l, i) => {
             const Icon = l.icon;
+            const isLast = i === langkah.length - 1;
             return (
               <Reveal key={l.num} delay={i * 0.1}>
-                <li className="relative text-left list-none">
-                  <div className="relative z-10 w-16 h-16 rounded-2xl bg-white border border-slate-200 shadow-sm flex items-center justify-center mb-5">
-                    <Icon className="w-6 h-6 text-[#005D4C]" aria-hidden="true" />
-                    <span className="absolute -top-2 -right-2 w-7 h-7 rounded-full bg-[#005D4C] text-white text-xs font-bold flex items-center justify-center font-display">
+                <li className="relative list-none text-left">
+                  {/* Konektor ke langkah berikutnya — relatif terhadap ikon, robust di segala lebar */}
+                  {!isLast && (
+                    <span
+                      className="absolute top-8 left-8 hidden h-px w-[calc(100%+2rem)] bg-emerald-200/70 lg:block"
+                      aria-hidden="true"
+                    />
+                  )}
+                  <div className="relative z-10 mb-5 flex h-16 w-16 items-center justify-center rounded-2xl border border-slate-200 bg-white shadow-sm">
+                    <Icon className="h-6 w-6 text-[#005D4C]" aria-hidden="true" />
+                    <span className="absolute -right-2 -top-2 flex h-7 w-7 items-center justify-center rounded-full bg-[#005D4C] font-display text-xs font-bold text-white">
                       {l.num}
                     </span>
                   </div>
-                  <h3 className="font-display font-semibold text-base text-[#0F172A] mb-2">{l.judul}</h3>
-                  <p className="text-[15px] text-slate-600 leading-relaxed">{l.desc}</p>
+                  <h3 className="mb-2 font-display text-base font-semibold text-[#0F172A]">{l.judul}</h3>
+                  <p className="text-[15px] leading-relaxed text-slate-600">{l.desc}</p>
                 </li>
               </Reveal>
             );
