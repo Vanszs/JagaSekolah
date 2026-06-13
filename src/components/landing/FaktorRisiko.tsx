@@ -17,22 +17,28 @@ const lain = [
     kode: "B",
     icon: ClipboardList,
     judul: "Behavior — Perilaku",
-    desc: "Keterlibatan menurun: tugas tidak dikumpulkan, partisipasi rendah, catatan pelanggaran bertambah.",
+    desc: "Keterlibatan di kelas menurun sebelum nilai ikut turun.",
+    poin: ["Tugas tidak dikumpulkan", "Partisipasi rendah", "Catatan pelanggaran"],
     tone: "bg-amber-50 ring-amber-100 text-amber-700",
+    dot: "bg-amber-400",
   },
   {
     kode: "C",
     icon: GraduationCap,
     judul: "Course — Akademik",
-    desc: "Nilai menurun antar periode, banyak mapel di bawah KKM, atau pernah tinggal kelas.",
+    desc: "Performa akademik yang melemah antar periode.",
+    poin: ["Nilai turun antar periode", "Mapel di bawah KKM", "Riwayat tinggal kelas"],
     tone: "bg-blue-50 ring-blue-100 text-blue-700",
+    dot: "bg-blue-400",
   },
   {
     kode: "+",
     icon: Wallet,
     judul: "Konteks Lokal Indonesia",
     desc: "Faktor khas yang memperberat: ekonomi keluarga, jarak ke sekolah, status keluarga, risiko menikah atau bekerja dini.",
+    poin: ["Ekonomi (KIP/PKH)", "Jarak rumah–sekolah", "Status keluarga"],
     tone: "bg-emerald-50 ring-emerald-100 text-[#005D4C]",
+    dot: "bg-emerald-400",
   },
 ];
 
@@ -79,8 +85,29 @@ export default function FaktorRisiko() {
             const wide = f.kode === "+";
             return (
               <Reveal key={f.judul} delay={(i + 1) * 0.08} className={wide ? "md:col-span-3" : ""}>
-                <article className={`h-full bg-white border border-slate-200 rounded-2xl p-6 transition-shadow duration-200 hover:shadow-md ${wide ? "flex flex-col sm:flex-row sm:items-center gap-4" : ""}`}>
-                  <div className={wide ? "shrink-0" : ""}>
+                {wide ? (
+                  <article className="h-full bg-white border border-slate-200 rounded-2xl p-6 flex flex-col sm:flex-row sm:items-center gap-5 transition-shadow duration-200 hover:shadow-md">
+                    <div className="shrink-0 sm:max-w-xs">
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className={`w-11 h-11 rounded-xl ring-1 flex items-center justify-center ${f.tone}`}>
+                          <Icon className="w-5 h-5" aria-hidden="true" />
+                        </div>
+                        <span className={`font-mono text-sm font-semibold rounded-md px-2 py-0.5 ${f.tone}`}>{f.kode}</span>
+                      </div>
+                      <h3 className="font-display font-semibold text-base text-[#0F172A] mb-1.5 leading-snug">{f.judul}</h3>
+                      <p className="text-sm text-slate-600 leading-relaxed">{f.desc}</p>
+                    </div>
+                    <ul className="flex flex-wrap gap-2 sm:ml-auto">
+                      {f.poin.map((p) => (
+                        <li key={p} className="inline-flex items-center gap-1.5 text-sm text-slate-700 bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5">
+                          <span className={`w-1.5 h-1.5 rounded-full ${f.dot} shrink-0`} aria-hidden="true" />
+                          {p}
+                        </li>
+                      ))}
+                    </ul>
+                  </article>
+                ) : (
+                  <article className="h-full bg-white border border-slate-200 rounded-2xl p-6 flex flex-col transition-shadow duration-200 hover:shadow-md">
                     <div className="flex items-center gap-3 mb-4">
                       <div className={`w-11 h-11 rounded-xl ring-1 flex items-center justify-center ${f.tone}`}>
                         <Icon className="w-5 h-5" aria-hidden="true" />
@@ -88,9 +115,17 @@ export default function FaktorRisiko() {
                       <span className={`font-mono text-sm font-semibold rounded-md px-2 py-0.5 ${f.tone}`}>{f.kode}</span>
                     </div>
                     <h3 className="font-display font-semibold text-base text-[#0F172A] mb-1.5 leading-snug">{f.judul}</h3>
-                  </div>
-                  <p className={`text-sm text-slate-600 leading-relaxed ${wide ? "sm:max-w-xl" : ""}`}>{f.desc}</p>
-                </article>
+                    <p className="text-sm text-slate-600 leading-relaxed mb-4">{f.desc}</p>
+                    <ul className="mt-auto space-y-2 border-t border-slate-100 pt-4">
+                      {f.poin.map((p) => (
+                        <li key={p} className="flex items-center gap-2 text-sm text-slate-700">
+                          <span className={`w-1.5 h-1.5 rounded-full ${f.dot} shrink-0`} aria-hidden="true" />
+                          {p}
+                        </li>
+                      ))}
+                    </ul>
+                  </article>
+                )}
               </Reveal>
             );
           })}
