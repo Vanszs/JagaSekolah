@@ -48,6 +48,22 @@ export const DEFAULT_THRESHOLDS: Thresholds = {
 
 /** Hash stabil dari konfigurasi ambang -> disimpan di Risiko.configVersion. */
 export function configVersion(t: Thresholds = DEFAULT_THRESHOLDS): string {
-  const json = JSON.stringify(t, Object.keys(t).sort());
-  return createHash("sha256").update(json).digest("hex").slice(0, 12);
+  return createHash("sha256").update(stableStringify(t)).digest("hex").slice(0, 12);
+}
+
+/**
+ * Serialisasi deterministik dengan key terurut REKURSIF.
+ * Catatan: JSON.stringify(obj, keysArray) memakai array sebagai allowlist properti
+ * (bukan pengurut) sehingga key bersarang seperti `bobot.*` ikut terpotong —
+ * itu membuat perubahan bobot tidak mengubah hash. Fungsi ini menghindarinya.
+ */
+function stableStringify(value: unknown): string {
+  if (value === null || typeof value !== "object") return JSON.stringify(value);
+  if (Array.isArray(value)) return `[${value.map(stableStringify).join(",")}]`;
+  const obj = value as Record<string, unknown>;
+  const body = Object.keys(obj)
+    .sort()
+    .map((k) => `${JSON.stringify(k)}:${stableStringify(obj[k])}`)
+    .join(",");
+  return `{${body}}`;
 }
