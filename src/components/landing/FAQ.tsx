@@ -51,9 +51,8 @@ function Item({ q, a }: { q: string; a: string }) {
           />
         </button>
       </h3>
-      <div
+      <section
         id={panelId}
-        role="region"
         aria-labelledby={btnId}
         hidden={!open}
         className={`grid transition-all duration-300 ${open ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}
@@ -61,7 +60,7 @@ function Item({ q, a }: { q: string; a: string }) {
         <div className="overflow-hidden">
           <p className="px-6 pb-5 text-[15px] text-slate-600 leading-relaxed">{a}</p>
         </div>
-      </div>
+      </section>
     </div>
   );
 }

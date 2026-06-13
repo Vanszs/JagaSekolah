@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { Menu, X } from "lucide-react";
 
@@ -18,20 +18,25 @@ const navItems = [
   { id: "faq", label: "FAQ" },
 ];
 
+// Scroll-past-threshold sebagai external store — tanpa render ekstra & SSR-safe.
+function subscribeScroll(cb: () => void) {
+  window.addEventListener("scroll", cb, { passive: true });
+  return () => window.removeEventListener("scroll", cb);
+}
+function useScrolled(threshold = 16) {
+  return useSyncExternalStore(
+    subscribeScroll,
+    () => window.scrollY > threshold, // client snapshot
+    () => false, // server snapshot (transparan saat SSR)
+  );
+}
+
 export default function Navbar({ activeSection: activeProp, setActiveSection: setActiveProp }: NavbarProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeInternal, setActiveInternal] = useState("beranda");
-  const [scrolled, setScrolled] = useState(false);
+  const scrolled = useScrolled();
   const activeSection = activeProp ?? activeInternal;
   const setActiveSection = setActiveProp ?? setActiveInternal;
-
-  // Transparan di atas, jadi solid (putih + shadow) setelah scroll > 16px.
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 16);
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
 
   return (
     <nav
