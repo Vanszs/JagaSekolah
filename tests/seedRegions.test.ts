@@ -3,7 +3,23 @@ import { expect } from "./_expect";
 import { SEED_REGIONS, ALL_SEED_SEKOLAH } from "@/lib/seed/regions";
 
 describe("data wilayah Indonesia nyata", () => {
-  it("≥12 provinsi nyata", () => expect(SEED_REGIONS.length).toBeGreaterThanOrEqual(12));
+  it("LENGKAP: 38 provinsi (termasuk pemekaran Papua 2022)", () => expect(SEED_REGIONS.length).toBe(38));
+
+  it("mencakup 4 provinsi pemekaran Papua 2022", () => {
+    const provinsi = SEED_REGIONS.map((p) => p.provinsi);
+    expect(provinsi).toContain("Papua Selatan");
+    expect(provinsi).toContain("Papua Tengah");
+    expect(provinsi).toContain("Papua Pegunungan");
+    expect(provinsi).toContain("Papua Barat Daya");
+  });
+
+  it("mencakup ujung barat (Aceh) sampai timur (Papua) + kepulauan", () => {
+    const provinsi = SEED_REGIONS.map((p) => p.provinsi);
+    expect(provinsi).toContain("Aceh");
+    expect(provinsi).toContain("Kepulauan Riau");
+    expect(provinsi).toContain("Maluku Utara");
+    expect(provinsi).toContain("Papua");
+  });
 
   it("setiap provinsi punya ≥1 kabupaten", () => {
     for (const p of SEED_REGIONS) expect(p.kabupatenList.length).toBeGreaterThanOrEqual(1);

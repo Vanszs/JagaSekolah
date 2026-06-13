@@ -160,8 +160,8 @@ async function main() {
   }
 
   // Anchor demo: SMP Negeri 1 Surabaya (perkotaan) + SMP Negeri 1 Wamena (3T Papua Pegunungan).
-  const NPSN_DEMO_A = "20500101"; // SMP Negeri 1 Surabaya
-  const NPSN_DEMO_B = "60300201"; // SMP Negeri 1 Wamena (3T)
+  const NPSN_DEMO_A = "15010001"; // SMP Negeri 1 Surabaya (Jawa Timur)
+  const NPSN_DEMO_B = "37010001"; // SMP Negeri 1 Wamena (Papua Pegunungan, 3T)
   const sekolahA = sekolahByNpsn.get(NPSN_DEMO_A)!;
   const sekolahB = sekolahByNpsn.get(NPSN_DEMO_B)!;
   const wilayah = { id: sekolahA.wilayahId }; // dinas demo mengawasi wilayah sekolah A
