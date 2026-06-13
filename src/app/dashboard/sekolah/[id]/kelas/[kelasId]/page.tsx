@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { ArrowRight } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { requireDashboardContext } from "@/lib/session";
-import { requireRole } from "@/lib/rbac";
+import { requireRole, assertSameSekolah } from "@/lib/rbac";
 import { audit } from "@/lib/audit";
 import { PageHeader, RiskBadge, EmptyState } from "@/components/dashboard/ui";
 import { Breadcrumbs } from "@/components/dashboard/Breadcrumbs";
@@ -16,7 +16,9 @@ const RANK: Record<string, number> = { merah: 3, kuning: 2, hijau: 1 };
 export default async function KelasRosterPage({ params }: { params: Promise<{ id: string; kelasId: string }> }) {
   const { id: sekolahId, kelasId } = await params;
   const ctx = await requireDashboardContext(`/dashboard/sekolah/${sekolahId}/kelas/${kelasId}`);
-  requireRole(ctx, "superadmin"); // roster menampilkan identitas siswa — dinas hanya agregat
+  // Roster menampilkan identitas siswa — hanya superadmin (semua) atau kepsek (sekolahnya).
+  requireRole(ctx, "superadmin", "kepsek");
+  assertSameSekolah(ctx, sekolahId);
 
   const kelas = await prisma.kelas.findFirst({
     where: { id: kelasId, sekolahId },
