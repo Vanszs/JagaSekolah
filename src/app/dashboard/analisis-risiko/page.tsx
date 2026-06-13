@@ -1,6 +1,8 @@
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
+import type { Prisma } from "@prisma/client";
 import { requireDashboardContext } from "@/lib/session";
+import { analyticsScope } from "@/lib/dashboardScope";
 import {
   getKpis,
   riskFactorBreakdown,
@@ -25,62 +27,70 @@ const sumberLabel = (s: string) => (s === "rule" ? "Berbasis aturan" : s === "ml
 
 export default async function AnalisisRisikoPage() {
   const ctx = await requireDashboardContext("/dashboard/analisis-risiko");
-  if (ctx.role !== "superadmin") redirect("/dashboard");
+  if (ctx.role !== "superadmin" && ctx.role !== "dinas") redirect("/dashboard");
+  const scope = analyticsScope(ctx);
+  // Tabel/heatmap antar-provinsi hanya bermakna pada cakupan NASIONAL.
+  const national = ctx.role === "superadmin" || (!ctx.wilayahId && !ctx.provinsi);
+  const judul = national ? "Analisis Risiko Nasional" : "Analisis Risiko Wilayah";
 
   return (
     <div className="space-y-8">
       <PageHeader
-        title="Analisis Risiko Nasional"
-        desc="Pendalaman risiko putus sekolah secara agregat: faktor dominan, sebaran skor, perubahan antarbulan, dan tren faktor. Tanpa identitas siswa."
+        title={judul}
+        desc="Pendalaman risiko putus sekolah secara agregat: faktor dominan, sebaran skor, tren faktor, dan sumber penilaian — sesuai cakupan Anda."
       />
 
       <Suspense fallback={<KpiSkeleton />}>
-        <RiskKpis />
+        <RiskKpis scope={scope} />
       </Suspense>
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Panel title="Faktor risiko dominan" desc="Jumlah siswa berisiko per faktor (merah + kuning).">
           <Suspense fallback={<ChartSkeleton h={260} />}>
-            <FactorSection />
+            <FactorSection scope={scope} />
           </Suspense>
         </Panel>
         <Panel title="Distribusi skor risiko" desc="Sebaran skor siswa terkini (0–100).">
           <Suspense fallback={<ChartSkeleton h={240} />}>
-            <ScoreSection />
+            <ScoreSection scope={scope} />
           </Suspense>
         </Panel>
       </div>
 
       <Panel title="Tren faktor risiko (6 bulan)" desc="Pergerakan tiap faktor dari waktu ke waktu.">
         <Suspense fallback={<ChartSkeleton h={280} />}>
-          <FactorTrendSection />
+          <FactorTrendSection scope={scope} />
         </Suspense>
       </Panel>
 
       <div className="grid gap-6 lg:grid-cols-[3fr_2fr]">
-        <Panel title="Perubahan risiko tinggi antarbulan" desc="Δ jumlah siswa merah per provinsi (bulan ini vs bulan lalu). Merah = memburuk.">
-          <Suspense fallback={<ChartSkeleton h={220} />}>
-            <DeltaSection />
-          </Suspense>
-        </Panel>
+        {national && (
+          <Panel title="Perubahan risiko tinggi antarbulan" desc="Δ jumlah siswa merah per provinsi (bulan ini vs bulan lalu). Merah = memburuk.">
+            <Suspense fallback={<ChartSkeleton h={220} />}>
+              <DeltaSection />
+            </Suspense>
+          </Panel>
+        )}
         <Panel title="Sumber penilaian" desc="Komposisi metode scoring.">
           <Suspense fallback={<ChartSkeleton h={220} />}>
-            <SourceSection />
+            <SourceSection scope={scope} />
           </Suspense>
         </Panel>
       </div>
 
-      <Panel title="Perbandingan antarprovinsi" desc="Klik provinsi untuk menelusuri hingga sekolah, kelas, dan siswa.">
-        <Suspense fallback={<ChartSkeleton h={200} />}>
-          <ProvinceSection />
-        </Suspense>
-      </Panel>
+      {national && (
+        <Panel title="Perbandingan antarprovinsi" desc="Klik provinsi untuk menelusuri hingga sekolah, kelas, dan siswa.">
+          <Suspense fallback={<ChartSkeleton h={200} />}>
+            <ProvinceSection />
+          </Suspense>
+        </Panel>
+      )}
     </div>
   );
 }
 
-async function RiskKpis() {
-  const [kpis, dropout] = await Promise.all([getKpis({}), dropoutTotal({})]);
+async function RiskKpis({ scope }: { scope: Prisma.SiswaWhereInput }) {
+  const [kpis, dropout] = await Promise.all([getKpis(scope), dropoutTotal(scope)]);
   const total = kpis.merah + kpis.kuning + kpis.hijau;
   const pctMerah = total > 0 ? Math.round((kpis.merah / total) * 100) : 0;
   return (
@@ -93,19 +103,19 @@ async function RiskKpis() {
   );
 }
 
-async function FactorSection() {
-  const factors = await riskFactorBreakdown({});
+async function FactorSection({ scope }: { scope: Prisma.SiswaWhereInput }) {
+  const factors = await riskFactorBreakdown(scope);
   if (factors.length === 0) return <p className="text-sm text-slate-500">Belum ada siswa berisiko untuk dianalisis.</p>;
   return <FactorBars data={factors.map((f) => ({ label: f.label, value: f.count }))} />;
 }
 
-async function ScoreSection() {
-  const bins = await riskScoreDistribution({});
+async function ScoreSection({ scope }: { scope: Prisma.SiswaWhereInput }) {
+  const bins = await riskScoreDistribution(scope);
   return <Histogram data={bins} seriesName="Siswa" xLabel="Skor risiko" />;
 }
 
-async function FactorTrendSection() {
-  const { points, factors } = await factorTrendMonthly({});
+async function FactorTrendSection({ scope }: { scope: Prisma.SiswaWhereInput }) {
+  const { points, factors } = await factorTrendMonthly(scope);
   if (factors.length === 0) return <p className="text-sm text-slate-500">Belum ada data faktor untuk ditampilkan.</p>;
   const series = factors.map((f, i) => ({ key: f, name: f, color: LINE_PALETTE[i % LINE_PALETTE.length]! }));
   return <MultiLineChart data={points} series={series} />;
@@ -125,8 +135,8 @@ async function DeltaSection() {
   );
 }
 
-async function SourceSection() {
-  const rows = await riskSourceBreakdown({});
+async function SourceSection({ scope }: { scope: Prisma.SiswaWhereInput }) {
+  const rows = await riskSourceBreakdown(scope);
   const total = rows.reduce((a, r) => a + r.count, 0);
   if (total === 0) return <p className="text-sm text-slate-500">Belum ada penilaian.</p>;
   return (

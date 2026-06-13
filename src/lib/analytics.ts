@@ -1155,3 +1155,37 @@ export async function consentBySekolah(): Promise<ConsentSchoolRow[]> {
     grouped.map((g) => ({ sekolahId: g.sekolahId, consentStatus: g.consentStatus, count: g._count })),
   );
 }
+
+/* ── Perbandingan sekolah ter-scope (dinas: pusat=semua / provinsi / kabupaten) ── */
+import type { Prisma as _Prisma } from "@prisma/client";
+export async function riskBySekolahScoped(where: _Prisma.SekolahWhereInput): Promise<RegionRisk[]> {
+  const sekolah = await prisma.sekolah.findMany({
+    where,
+    select: { id: true, nama: true, npsn: true },
+    orderBy: { nama: "asc" },
+  });
+  if (sekolah.length === 0) return [];
+  const grouped = await prisma.risiko.groupBy({
+    by: ["sekolahId", "kategori"],
+    where: { isLatest: true, sekolahId: { in: sekolah.map((s) => s.id) } },
+    _count: true,
+  });
+  const map = new Map<string, RegionRisk>();
+  for (const s of sekolah) {
+    map.set(s.id, { id: s.id, label: s.nama, sub: `NPSN ${s.npsn}`, merah: 0, kuning: 0, hijau: 0, total: 0, sekolah: 1 });
+  }
+  for (const g of grouped) {
+    const r = map.get(g.sekolahId);
+    if (!r) continue;
+    r[g.kategori] += g._count;
+    r.total += g._count;
+  }
+  return Array.from(map.values()).sort((a, b) => b.merah - a.merah);
+}
+
+/** Sekolah-where dari konteks dinas (pusat={}, provinsi, kabupaten). */
+export function dinasSekolahWhere(opts: { wilayahId: string | null; provinsi: string | null }): _Prisma.SekolahWhereInput {
+  if (opts.wilayahId) return { wilayahId: opts.wilayahId };
+  if (opts.provinsi) return { wilayah: { provinsi: opts.provinsi } };
+  return {};
+}

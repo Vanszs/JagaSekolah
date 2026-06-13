@@ -14,6 +14,9 @@ const CreateBody = z.object({
   role: z.enum(["dinas", "kepsek", "guru", "bk"]),
   sekolahId: z.string().optional(),
   wilayahId: z.string().optional(),
+  provinsi: z.string().optional(),
+  /** Tingkat dinas (hanya relevan saat role=dinas). */
+  dinasLevel: z.enum(["pusat", "provinsi", "kabupaten"]).optional(),
   kelasId: z.string().optional(),
 });
 
@@ -59,19 +62,34 @@ export async function POST(req: Request) {
       // Tentukan tenant target sesuai role pembuat & role target.
       let sekolahId = body.sekolahId ?? null;
       let wilayahId = body.wilayahId ?? null;
+      let provinsi = body.provinsi ?? null;
       const kelasId = body.kelasId ?? null;
 
       if (ctx.role === "kepsek") {
         // kepsek hanya boleh menempatkan user di sekolahnya
         sekolahId = ctx.sekolahId;
         wilayahId = null;
+        provinsi = null;
       }
 
       // Validasi kelengkapan tenant per role
       if ((body.role === "guru" || body.role === "bk" || body.role === "kepsek") && !sekolahId)
         throw new AuthError(403, "sekolahId wajib untuk role ini.");
-      if (body.role === "dinas" && !wilayahId)
-        throw new AuthError(403, "wilayahId wajib untuk dinas.");
+      if (body.role === "dinas") {
+        // Dinas berjenjang: pusat (kosong), provinsi (provinsi), kabupaten (wilayahId).
+        const level = body.dinasLevel ?? (wilayahId ? "kabupaten" : provinsi ? "provinsi" : "pusat");
+        if (level === "kabupaten") {
+          if (!wilayahId) throw new AuthError(403, "wilayahId wajib untuk dinas kabupaten.");
+          provinsi = null;
+        } else if (level === "provinsi") {
+          if (!provinsi) throw new AuthError(403, "provinsi wajib untuk dinas provinsi.");
+          wilayahId = null;
+        } else {
+          // pusat: keduanya null
+          wilayahId = null;
+          provinsi = null;
+        }
+      }
       if (body.role === "guru" && !kelasId)
         throw new AuthError(403, "kelasId wajib untuk guru (wali kelas).");
 
@@ -79,6 +97,10 @@ export async function POST(req: Request) {
       if (sekolahId) {
         const s = await prisma.sekolah.findUnique({ where: { id: sekolahId }, select: { id: true } });
         if (!s) throw new AuthError(403, "Sekolah tidak ditemukan.");
+      }
+      if (wilayahId) {
+        const w = await prisma.wilayah.findUnique({ where: { id: wilayahId }, select: { id: true } });
+        if (!w) throw new AuthError(403, "Wilayah tidak ditemukan.");
       }
       if (kelasId) {
         const k = await prisma.kelas.findUnique({ where: { id: kelasId }, select: { sekolahId: true } });
@@ -97,6 +119,7 @@ export async function POST(req: Request) {
           role: body.role,
           sekolahId,
           wilayahId,
+          provinsi,
           kelasId,
         },
         select: { id: true, nama: true, email: true, role: true },

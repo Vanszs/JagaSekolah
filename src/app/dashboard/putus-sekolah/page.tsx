@@ -1,6 +1,8 @@
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
+import type { Prisma } from "@prisma/client";
 import { requireDashboardContext } from "@/lib/session";
+import { analyticsScope } from "@/lib/dashboardScope";
 import { dropoutTotal, dropoutTrend, dropoutByProvinsi } from "@/lib/analytics";
 import { PageHeader, StatTile, Panel, ChartSkeleton } from "@/components/dashboard/ui";
 import { SingleAreaChart } from "@/components/charts/recharts/SingleAreaChart";
@@ -11,49 +13,57 @@ export const dynamic = "force-dynamic";
 
 export default async function PutusSekolahPage() {
   const ctx = await requireDashboardContext("/dashboard/putus-sekolah");
-  if (ctx.role !== "superadmin") redirect("/dashboard");
+  if (ctx.role !== "superadmin" && ctx.role !== "dinas") redirect("/dashboard");
+  const scope = analyticsScope(ctx);
+  const national = ctx.role === "superadmin" || (!ctx.wilayahId && !ctx.provinsi);
 
   return (
     <div className="space-y-8">
       <PageHeader
         title="Monitoring Putus Sekolah"
-        desc="Pemantauan agregat siswa yang tercatat sudah tidak aktif/putus sekolah. Tanpa identitas siswa — fokus pada skala dan sebaran untuk evaluasi kebijakan."
+        desc="Pemantauan agregat siswa yang tercatat sudah tidak aktif/putus sekolah — sesuai cakupan Anda. Fokus pada skala & sebaran untuk evaluasi kebijakan."
       />
 
       <Suspense fallback={<KpiSkeleton />}>
-        <DropoutKpis />
+        <DropoutKpis scope={scope} national={national} />
       </Suspense>
 
       <Panel title="Tren putus sekolah 12 bulan" desc="Berdasarkan tanggal nonaktif tercatat.">
         <Suspense fallback={<ChartSkeleton h={220} />}>
-          <TrendSection />
+          <TrendSection scope={scope} />
         </Suspense>
       </Panel>
 
-      <Panel title="Putus sekolah per provinsi" desc="Sebaran wilayah — prioritas intervensi kebijakan.">
-        <Suspense fallback={<ChartSkeleton h={220} />}>
-          <ProvinceSection />
-        </Suspense>
-      </Panel>
+      {national && (
+        <Panel title="Putus sekolah per provinsi" desc="Sebaran wilayah — prioritas intervensi kebijakan.">
+          <Suspense fallback={<ChartSkeleton h={220} />}>
+            <ProvinceSection />
+          </Suspense>
+        </Panel>
+      )}
     </div>
   );
 }
 
-async function DropoutKpis() {
-  const [total, byProv, trend] = await Promise.all([dropoutTotal({}), dropoutByProvinsi(), dropoutTrend({})]);
+async function DropoutKpis({ scope, national }: { scope: Prisma.SiswaWhereInput; national: boolean }) {
+  const [total, byProv, trend] = await Promise.all([dropoutTotal(scope), national ? dropoutByProvinsi() : Promise.resolve([]), dropoutTrend(scope)]);
   const provTeratas = byProv[0];
   const bulanIni = trend.at(-1)?.value ?? 0;
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
       <StatTile label="Total putus sekolah" value={total.toLocaleString("id-ID")} accent="merah" sub="akumulatif tercatat" />
       <StatTile label="Bulan ini" value={bulanIni.toLocaleString("id-ID")} accent={bulanIni > 0 ? "kuning" : "hijau"} sub="kasus baru tercatat" />
-      <StatTile label="Provinsi tertinggi" value={provTeratas?.provinsi ?? "—"} accent="merah" sub={provTeratas ? `${provTeratas.count} kasus` : "belum ada"} />
+      {national ? (
+        <StatTile label="Provinsi tertinggi" value={provTeratas?.provinsi ?? "—"} accent="merah" sub={provTeratas ? `${provTeratas.count} kasus` : "belum ada"} />
+      ) : (
+        <StatTile label="Cakupan" value="Wilayah Anda" accent="brand" sub="agregat ter-scope" />
+      )}
     </div>
   );
 }
 
-async function TrendSection() {
-  const rows = await dropoutTrend({});
+async function TrendSection({ scope }: { scope: Prisma.SiswaWhereInput }) {
+  const rows = await dropoutTrend(scope);
   if (rows.every((r) => r.value === 0)) return <p className="text-sm text-slate-500">Belum ada kasus putus sekolah tercatat dalam 12 bulan.</p>;
   return <SingleAreaChart name="Putus sekolah" data={rows} />;
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useReducer } from "react";
+import { useReducer, useState } from "react";
 import { Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 import type { Role } from "@prisma/client";
 
@@ -65,10 +65,13 @@ export default function CreateUserForm({ actorRole, roles, sekolah, wilayah, kel
     success: null,
   });
   const { role, sekolahId, submitting, error, success } = state;
+  const [dinasLevelSel, setDinasLevelSel] = useState<"pusat" | "provinsi" | "kabupaten">("kabupaten");
+  // Daftar provinsi unik dari label wilayah ("Kabupaten, Provinsi").
+  const provinsiList = Array.from(new Set(wilayah.map((w) => w.label.split(", ").at(-1) ?? ""))).filter(Boolean).sort();
 
   // Field tenant yang dibutuhkan bergantung peran (cermin aturan API).
   const needSekolah = role === "kepsek" || role === "guru" || role === "bk";
-  const needWilayah = role === "dinas";
+  const isDinas = role === "dinas";
   const needKelas = role === "guru";
 
   const kelasOptions = kelas.filter((k) => !sekolahId || k.sekolahId === sekolahId);
@@ -85,7 +88,12 @@ export default function CreateUserForm({ actorRole, roles, sekolah, wilayah, kel
       role: String(role),
     };
     if (needSekolah) payload.sekolahId = lockedSekolahId ?? sekolahId;
-    if (needWilayah) payload.wilayahId = String(fd.get("wilayahId") || "");
+    if (isDinas) {
+      const level = String(fd.get("dinasLevel") || "kabupaten");
+      payload.dinasLevel = level;
+      if (level === "kabupaten") payload.wilayahId = String(fd.get("wilayahId") || "");
+      else if (level === "provinsi") payload.provinsi = String(fd.get("provinsi") || "");
+    }
     if (needKelas) payload.kelasId = String(fd.get("kelasId") || "");
 
     dispatch({ type: "submitStart" });
@@ -208,16 +216,48 @@ export default function CreateUserForm({ actorRole, roles, sekolah, wilayah, kel
         </div>
       )}
 
-      {/* Wilayah — wajib untuk dinas */}
-      {needWilayah && (
-        <div className="space-y-1.5">
-          <label htmlFor="wilayahId" className="block text-sm font-medium text-slate-900">Wilayah</label>
-          <select id="wilayahId" name="wilayahId" required className={fieldCls}>
-            <option value="" disabled>Pilih wilayah…</option>
-            {wilayah.map((w) => (
-              <option key={w.id} value={w.id}>{w.label}</option>
-            ))}
-          </select>
+      {/* Dinas berjenjang: pusat / provinsi / kabupaten */}
+      {isDinas && (
+        <div className="space-y-4">
+          <div className="space-y-1.5">
+            <label htmlFor="dinasLevel" className="block text-sm font-medium text-slate-900">Tingkat dinas</label>
+            <select
+              id="dinasLevel"
+              name="dinasLevel"
+              value={dinasLevelSel}
+              onChange={(e) => setDinasLevelSel(e.target.value as "pusat" | "provinsi" | "kabupaten")}
+              className={fieldCls}
+            >
+              <option value="pusat">Pusat (nasional)</option>
+              <option value="provinsi">Provinsi</option>
+              <option value="kabupaten">Kabupaten/Kota</option>
+            </select>
+          </div>
+          {dinasLevelSel === "provinsi" && (
+            <div className="space-y-1.5">
+              <label htmlFor="provinsi" className="block text-sm font-medium text-slate-900">Provinsi</label>
+              <select id="provinsi" name="provinsi" required className={fieldCls}>
+                <option value="" disabled>Pilih provinsi…</option>
+                {provinsiList.map((p) => (
+                  <option key={p} value={p}>{p}</option>
+                ))}
+              </select>
+            </div>
+          )}
+          {dinasLevelSel === "kabupaten" && (
+            <div className="space-y-1.5">
+              <label htmlFor="wilayahId" className="block text-sm font-medium text-slate-900">Wilayah (kabupaten/kota)</label>
+              <select id="wilayahId" name="wilayahId" required className={fieldCls}>
+                <option value="" disabled>Pilih wilayah…</option>
+                {wilayah.map((w) => (
+                  <option key={w.id} value={w.id}>{w.label}</option>
+                ))}
+              </select>
+            </div>
+          )}
+          {dinasLevelSel === "pusat" && (
+            <p className="text-xs text-slate-400">Dinas pusat mengakses statistik seluruh Indonesia (tanpa wilayah spesifik).</p>
+          )}
         </div>
       )}
 

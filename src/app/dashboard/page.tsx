@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { requireDashboardContext } from "@/lib/session";
 import { siswaScope, dinasLevel } from "@/lib/rbac";
 import { analyticsScope } from "@/lib/dashboardScope";
+import { dinasSekolahWhere } from "@/lib/analytics";
 import NationalOverview from "@/components/dashboard/NationalOverview";
 import DinasDashboard from "@/components/dashboard/DinasDashboard";
 import SchoolDashboard from "@/components/dashboard/SchoolDashboard";
@@ -41,7 +42,7 @@ export default async function OverviewPage() {
     return (
       <DinasDashboard
         regionLabel={regionLabel}
-        wilayahId={ctx.wilayahId ?? ""}
+        sekolahWhere={dinasSekolahWhere({ wilayahId: ctx.wilayahId, provinsi: ctx.provinsi })}
         scope={where}
       />
     );

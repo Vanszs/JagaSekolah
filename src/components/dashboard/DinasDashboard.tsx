@@ -6,7 +6,7 @@ import {
   monthlyRiskTrend,
   riskFactorBreakdown,
   riskDonut,
-  riskBySekolah,
+  riskBySekolahScoped,
   interventionTrend,
   attendanceSummary,
 } from "@/lib/analytics";
@@ -25,11 +25,11 @@ import { SingleAreaChart } from "@/components/charts/recharts/SingleAreaChart";
  */
 export default function DinasDashboard({
   regionLabel,
-  wilayahId,
+  sekolahWhere,
   scope,
 }: {
   regionLabel: string;
-  wilayahId: string;
+  sekolahWhere: Prisma.SekolahWhereInput;
   scope: Prisma.SiswaWhereInput;
 }) {
   return (
@@ -68,7 +68,7 @@ export default function DinasDashboard({
 
       <Panel title="Perbandingan sekolah" desc="Komposisi risiko per sekolah di wilayah ini.">
         <Suspense fallback={<ChartSkeleton h={260} />}>
-          <SchoolCompare wilayahId={wilayahId} />
+          <SchoolCompare sekolahWhere={sekolahWhere} />
         </Suspense>
       </Panel>
 
@@ -78,7 +78,7 @@ export default function DinasDashboard({
           Telusuri sekolah
         </h2>
         <Suspense fallback={<TableSkeleton />}>
-          <SchoolTable wilayahId={wilayahId} />
+          <SchoolTable sekolahWhere={sekolahWhere} />
         </Suspense>
       </section>
     </div>
@@ -138,13 +138,13 @@ async function InterventionSection({ scope }: { scope: Prisma.SiswaWhereInput })
   return <SingleAreaChart data={t.map((x) => ({ label: x.label, value: x.jumlah }))} name="Intervensi" />;
 }
 
-async function SchoolCompare({ wilayahId }: { wilayahId: string }) {
-  const sek = await riskBySekolah(wilayahId);
+async function SchoolCompare({ sekolahWhere }: { sekolahWhere: Prisma.SekolahWhereInput }) {
+  const sek = await riskBySekolahScoped(sekolahWhere);
   return <CategoryStackedBars data={sek.map((k) => ({ label: k.label, merah: k.merah, kuning: k.kuning, hijau: k.hijau }))} />;
 }
 
-async function SchoolTable({ wilayahId }: { wilayahId: string }) {
-  const sek = await riskBySekolah(wilayahId);
+async function SchoolTable({ sekolahWhere }: { sekolahWhere: Prisma.SekolahWhereInput }) {
+  const sek = await riskBySekolahScoped(sekolahWhere);
   return <RegionTable rows={sek} firstColLabel="Sekolah" hrefFor={(r) => `/dashboard/sekolah/${r.id}`} />;
 }
 

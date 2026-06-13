@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { prisma } from "@/lib/db";
 import { requireDashboardContext } from "@/lib/session";
 import { requireRole } from "@/lib/rbac";
 import { audit } from "@/lib/audit";
@@ -15,9 +16,16 @@ export default async function ProvinsiPage({ params }: { params: Promise<{ provi
   const provinsi = decodeURIComponent(raw);
   const ctx = await requireDashboardContext(`/dashboard/wilayah/${raw}`);
   requireRole(ctx, "superadmin", "dinas");
-  // Dinas provinsi/kabupaten hanya boleh provinsinya sendiri; pusat & superadmin lolos.
-  if (ctx.role === "dinas" && ctx.provinsi && ctx.provinsi !== provinsi) {
-    notFound();
+  // Jenjang dinas: provinsi → hanya provinsinya; kabupaten → hanya provinsi wilayahnya;
+  // pusat & superadmin → semua. (notFound = sembunyikan eksistensi, anti-enumeration.)
+  if (ctx.role === "dinas") {
+    if (ctx.provinsi) {
+      if (ctx.provinsi !== provinsi) notFound();
+    } else if (ctx.wilayahId) {
+      const w = await prisma.wilayah.findUnique({ where: { id: ctx.wilayahId }, select: { provinsi: true } });
+      if (w?.provinsi !== provinsi) notFound();
+    }
+    // pusat (keduanya null): lolos semua provinsi
   }
 
   const kabupaten = await riskByKabupaten(provinsi);

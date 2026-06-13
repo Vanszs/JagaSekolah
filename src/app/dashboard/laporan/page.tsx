@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { requireDashboardContext } from "@/lib/session";
-import { prisma } from "@/lib/db";
-import { riskBySekolah, getKpis, attendanceSummary, interventionByJenis } from "@/lib/analytics";
+import { analyticsScope } from "@/lib/dashboardScope";
+import { riskBySekolahScoped, dinasSekolahWhere, getKpis, attendanceSummary, interventionByJenis } from "@/lib/analytics";
 import { PageHeader, StatTile, Panel } from "@/components/dashboard/ui";
 import { ExportButton, type ExportRow } from "@/components/dashboard/ExportButton";
 
@@ -9,19 +9,19 @@ export const dynamic = "force-dynamic";
 
 export default async function LaporanPage() {
   const ctx = await requireDashboardContext("/dashboard/laporan");
-  if (ctx.role !== "dinas" || !ctx.wilayahId) redirect("/dashboard");
+  if (ctx.role !== "dinas") redirect("/dashboard");
 
-  const scope = { sekolah: { wilayahId: ctx.wilayahId } };
-  const [wilayah, sekolahRows, kpis, hadir, intervensi] = await Promise.all([
-    prisma.wilayah.findUnique({ where: { id: ctx.wilayahId }, select: { provinsi: true, kabupaten: true } }),
-    riskBySekolah(ctx.wilayahId),
+  const scope = analyticsScope(ctx);
+  const where = dinasSekolahWhere({ wilayahId: ctx.wilayahId, provinsi: ctx.provinsi });
+  const [sekolahRows, kpis, hadir, intervensi] = await Promise.all([
+    riskBySekolahScoped(where),
     getKpis(scope),
     attendanceSummary(scope),
     interventionByJenis(scope),
   ]);
 
   const totalIntervensi = intervensi.reduce((a, j) => a + j.count, 0);
-  const wilayahLabel = wilayah ? `${wilayah.kabupaten}, ${wilayah.provinsi}` : "wilayah Anda";
+  const wilayahLabel = ctx.wilayahId ? "wilayah Anda" : ctx.provinsi ? `Provinsi ${ctx.provinsi}` : "Nasional";
 
   // Baris ekspor: rekap per sekolah (agregat, tanpa identitas siswa).
   const exportRows: ExportRow[] = sekolahRows.map((s) => ({
