@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ArrowRight, Users, Lock } from "lucide-react";
 import type { KategoriRisiko, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
-import { requireContext } from "@/lib/session";
+import { requireDashboardContext } from "@/lib/session";
 import { siswaScope, AuthError } from "@/lib/rbac";
 import { PageHeader, RiskDot, EmptyState } from "@/components/dashboard/ui";
 
@@ -20,7 +20,7 @@ export default async function SiswaListPage({
 }: {
   searchParams: Promise<{ q?: string; kategori?: string }>;
 }) {
-  const ctx = await requireContext();
+  const ctx = await requireDashboardContext("/dashboard/siswa");
   const { q = "", kategori = "" } = await searchParams;
 
   // Dinas tidak boleh data per-siswa — tampilkan notice ramah (bukan crash).

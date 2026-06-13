@@ -1,7 +1,7 @@
 import { Lock } from "lucide-react";
 import type { KategoriRisiko } from "@prisma/client";
 import { prisma } from "@/lib/db";
-import { requireContext } from "@/lib/session";
+import { requireDashboardContext } from "@/lib/session";
 import { agregatScope, AuthError } from "@/lib/rbac";
 import { audit } from "@/lib/audit";
 import { PageHeader, StatTile, EmptyState } from "@/components/dashboard/ui";
@@ -9,7 +9,7 @@ import { PageHeader, StatTile, EmptyState } from "@/components/dashboard/ui";
 export const dynamic = "force-dynamic";
 
 export default async function AgregatPage() {
-  const ctx = await requireContext();
+  const ctx = await requireDashboardContext("/dashboard/agregat");
 
   let scope: { wilayahId?: string };
   try {

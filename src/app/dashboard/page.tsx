@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ArrowRight, Users, BarChart3 } from "lucide-react";
 import { prisma } from "@/lib/db";
-import { requireContext } from "@/lib/session";
+import { requireDashboardContext } from "@/lib/session";
 import { siswaScope, agregatScope } from "@/lib/rbac";
 import type { KategoriRisiko } from "@prisma/client";
 import { PageHeader, StatTile, RiskDot, EmptyState } from "@/components/dashboard/ui";
@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 const KATEGORI: KategoriRisiko[] = ["merah", "kuning", "hijau"];
 
 export default async function OverviewPage() {
-  const ctx = await requireContext();
+  const ctx = await requireDashboardContext("/dashboard");
 
   // ── Dinas: ringkasan agregat anonim (tanpa data per-siswa) ──
   if (ctx.role === "dinas") {

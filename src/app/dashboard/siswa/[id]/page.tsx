@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, CalendarX, GraduationCap, HeartHandshake, Lightbulb, TriangleAlert } from "lucide-react";
 import type { AbsensiStatus } from "@prisma/client";
 import { prisma } from "@/lib/db";
-import { requireContext } from "@/lib/session";
+import { requireDashboardContext } from "@/lib/session";
 import { resolveSiswa } from "@/lib/resolveSiswa";
 import { AuthError } from "@/lib/rbac";
 import { RiskBadge, EmptyState } from "@/components/dashboard/ui";
@@ -21,7 +21,7 @@ function parseAlasan(json: string): { alasan: string[]; saran: string[] } {
 }
 
 export default async function SiswaDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const ctx = await requireContext();
+  const ctx = await requireDashboardContext(`/dashboard/siswa/${(await params).id}`);
   const { id } = await params;
 
   // IDOR-safe: lempar 403 (uniform) bila bukan milik tenant.
