@@ -1,12 +1,14 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, CalendarX, GraduationCap, HeartHandshake, Lightbulb, TriangleAlert } from "lucide-react";
+import { ArrowLeft, CalendarX, GraduationCap, Lightbulb, TriangleAlert } from "lucide-react";
 import type { AbsensiStatus } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { requireDashboardContext } from "@/lib/session";
 import { resolveSiswa } from "@/lib/resolveSiswa";
 import { AuthError } from "@/lib/rbac";
 import { RiskBadge, EmptyState } from "@/components/dashboard/ui";
+import { IntervensiManager } from "@/components/dashboard/IntervensiManager";
+import { ConsentManager } from "@/components/dashboard/ConsentManager";
 import { parseAlasan } from "@/lib/parseAlasan";
 
 export const dynamic = "force-dynamic";
@@ -34,6 +36,7 @@ export default async function SiswaDetailPage({ params }: { params: Promise<{ id
       nisn: true,
       jenisKelamin: true,
       penerimaKip: true,
+      consentStatus: true,
       kelas: { select: { nama: true } },
       risiko: {
         where: { isLatest: true },
@@ -44,8 +47,7 @@ export default async function SiswaDetailPage({ params }: { params: Promise<{ id
       intervensi: {
         where: { deletedAt: null },
         orderBy: { tanggal: "desc" },
-        take: 5,
-        select: { id: true, tanggal: true, jenis: true, catatan: true, oleh: { select: { nama: true } } },
+        select: { id: true, tanggal: true, jenis: true, catatan: true, version: true, olehUserId: true, oleh: { select: { nama: true } } },
       },
     },
   });
@@ -216,32 +218,23 @@ export default async function SiswaDetailPage({ params }: { params: Promise<{ id
         </section>
       </div>
 
-      {/* Riwayat intervensi */}
-      <section className="mt-5 rounded-xl border border-slate-200 bg-white p-5">
-        <h2 className="flex items-center gap-2 font-display text-base font-semibold text-[#0F172A]">
-          <HeartHandshake className="h-4 w-4 text-slate-400" aria-hidden="true" />
-          Riwayat intervensi
-        </h2>
-        {siswa.intervensi.length === 0 ? (
-          <p className="mt-3 text-sm text-slate-500">Belum ada tindak lanjut tercatat.</p>
-        ) : (
-          <ol className="mt-4 space-y-4 border-l border-slate-200 pl-4">
-            {siswa.intervensi.map((it) => (
-              <li key={it.id} className="relative">
-                <span className="absolute -left-[1.30rem] top-1 h-2 w-2 rounded-full bg-[#005D4C] ring-4 ring-white" aria-hidden="true" />
-                <p className="text-xs text-slate-400">
-                  <time dateTime={it.tanggal.toISOString()}>
-                    {it.tanggal.toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
-                  </time>
-                  {" · "}{it.oleh.nama}
-                </p>
-                <p className="mt-0.5 text-sm font-medium capitalize text-slate-900">{it.jenis.replace(/_/g, " ")}</p>
-                {it.catatan && <p className="mt-0.5 text-sm text-slate-600">{it.catatan}</p>}
-              </li>
-            ))}
-          </ol>
-        )}
-      </section>
+      {/* Riwayat & tindak lanjut (CRUD) */}
+      <IntervensiManager
+        siswaId={siswa.id}
+        currentUserId={ctx.userId}
+        canEditAll={ctx.role === "kepsek" || ctx.role === "superadmin"}
+        items={siswa.intervensi.map((it) => ({
+          id: it.id,
+          tanggal: it.tanggal.toISOString(),
+          jenis: it.jenis,
+          catatan: it.catatan,
+          version: it.version,
+          olehUserId: it.olehUserId,
+          olehNama: it.oleh.nama,
+        }))}
+      />
+
+      <ConsentManager siswaId={siswa.id} status={siswa.consentStatus} />
 
       {risiko && (
         <p className="mt-5 text-xs text-slate-400">

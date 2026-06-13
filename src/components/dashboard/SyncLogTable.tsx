@@ -21,9 +21,10 @@ function StatusBadge({ status }: { status: string }) {
   return <span className={`inline-flex rounded-md px-2 py-0.5 text-xs font-medium ring-1 ring-inset ${cls}`}>{status}</span>;
 }
 
+const fmt = (iso: string) =>
+  new Date(iso).toLocaleString("id-ID", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
+
 export function SyncLogTable({ rows }: { rows: SyncLogRow[] }) {
-  const fmt = (iso: string) =>
-    new Date(iso).toLocaleString("id-ID", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
   const columns: Column<SyncLogRow>[] = [
     { key: "waktu", header: "Waktu", sortValue: (r) => r.waktu, cell: (r) => <span className="tabular-nums">{fmt(r.waktu)}</span> },
     { key: "sekolah", header: "Sekolah", sortValue: (r) => r.sekolah },
