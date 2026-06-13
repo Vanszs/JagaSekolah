@@ -1,5 +1,6 @@
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
+import Google from "next-auth/providers/google";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
@@ -9,6 +10,8 @@ const CredsSchema = z.object({
   email: z.string().email(),
   password: z.string().min(1),
 });
+
+const googleEnabled = !!(process.env.AUTH_GOOGLE_ID && process.env.AUTH_GOOGLE_SECRET);
 
 export const { handlers, auth, signOut } = NextAuth({
   session: { strategy: "jwt", maxAge: 15 * 60 }, // 15 menit (short expiry)
@@ -40,24 +43,65 @@ export const { handlers, auth, signOut } = NextAuth({
         };
       },
     }),
+    // Google OAuth — hanya aktif bila kredensial diset di env.
+    // Keamanan: akun TIDAK dibuat otomatis; hanya email yang sudah
+    // di-provisioning admin (User aktif) yang boleh masuk.
+    ...(googleEnabled
+      ? [
+          Google({
+            clientId: process.env.AUTH_GOOGLE_ID!,
+            clientSecret: process.env.AUTH_GOOGLE_SECRET!,
+            authorization: { params: { prompt: "select_account" } },
+          }),
+        ]
+      : []),
   ],
   callbacks: {
+    async signIn({ user, account }) {
+      // Credentials sudah divalidasi di authorize().
+      if (account?.provider !== "google") return true;
+      // Google: izinkan hanya bila email cocok dengan User aktif yang sudah ada.
+      const email = user.email?.toLowerCase();
+      if (!email) return false;
+      const existing = await prisma.user.findUnique({ where: { email } });
+      if (!existing || !existing.aktif) {
+        // Tolak — arahkan ke halaman login dengan pesan.
+        return "/login?error=AccessDenied";
+      }
+      return true;
+    },
     async jwt({ token, user }) {
       if (user) {
-        const u = user as {
+        const u = user as Partial<{
           id: string;
           role: Role;
           sekolahId: string | null;
           wilayahId: string | null;
           kelasId: string | null;
           tokenVersion: number;
-        };
-        token.uid = u.id;
-        token.role = u.role;
-        token.sekolahId = u.sekolahId;
-        token.wilayahId = u.wilayahId;
-        token.kelasId = u.kelasId;
-        token.tokenVersion = u.tokenVersion;
+        }>;
+        // Credentials membawa field lengkap; OAuth (Google) tidak —
+        // ambil dari DB berdasarkan email untuk melengkapi role + tenant.
+        if (u.role) {
+          token.uid = u.id;
+          token.role = u.role;
+          token.sekolahId = u.sekolahId ?? null;
+          token.wilayahId = u.wilayahId ?? null;
+          token.kelasId = u.kelasId ?? null;
+          token.tokenVersion = u.tokenVersion;
+        } else if (user.email) {
+          const dbUser = await prisma.user.findUnique({
+            where: { email: user.email.toLowerCase() },
+          });
+          if (dbUser) {
+            token.uid = dbUser.id;
+            token.role = dbUser.role;
+            token.sekolahId = dbUser.sekolahId ?? null;
+            token.wilayahId = dbUser.wilayahId ?? null;
+            token.kelasId = dbUser.kelasId ?? null;
+            token.tokenVersion = dbUser.tokenVersion;
+          }
+        }
       }
       return token;
     },
