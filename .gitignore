@@ -23,3 +23,7 @@ ml-service/*.pkl
 ml-service/.venv/
 # typescript incremental
 *.tsbuildinfo
+
+# scratch / verification artifacts (browser screenshots, playwright)
+*.png
+.playwright-mcp/
