@@ -1,15 +1,19 @@
 // JagaSekolah - Prisma schema (MULTI-TENANT / Opsi B)
 // Pemerintah/Dinas pegang sistem terpusat; tiap sekolah login & hanya akses datanya sendiri.
 // Dinas hanya melihat AGREGAT ANONIM per wilayah.
-// MVP: SQLite. Skala: ganti provider ke postgresql.
+// DB: PostgreSQL di belakang PgBouncer (transaction pooling).
+//   - DATABASE_URL : koneksi runtime via PgBouncer (?pgbouncer=true).
+//   - DIRECT_URL   : koneksi LANGSUNG ke Postgres untuk `migrate`/`db push`
+//     (migrasi tidak bisa lewat transaction pooler).
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 enum Role {
@@ -92,7 +96,6 @@ model Kelas {
   sekolahId   String
   sekolah     Sekolah @relation(fields: [sekolahId], references: [id])
   nama        String
-  waliKelasId String?
   wali        User[]  @relation("WaliKelas")
   siswa       Siswa[]
 

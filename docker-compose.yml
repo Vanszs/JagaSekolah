@@ -1,15 +1,72 @@
 services:
+  # PostgreSQL — sumber data utama (single source of truth).
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-jaga}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-jaga_dev_pwd}
+      POSTGRES_DB: ${POSTGRES_DB:-jagasekolah}
+    volumes:
+      - jagasekolah-pgdata:/var/lib/postgresql/data
+    # Port di-expose untuk migrasi/seed dari host (DIRECT_URL).
+    # Host port bisa di-override bila 5432 sudah dipakai: POSTGRES_HOST_PORT=55432.
+    ports:
+      - "${POSTGRES_HOST_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-jaga} -d ${POSTGRES_DB:-jagasekolah}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  # PgBouncer — connection pooler (TRANSACTION mode) untuk skala nasional.
+  # Aplikasi (Prisma) terhubung ke sini; migrasi tetap lewat Postgres langsung.
+  pgbouncer:
+    image: edoburu/pgbouncer:v1.23.1-p2
+    environment:
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_USER: ${POSTGRES_USER:-jaga}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-jaga_dev_pwd}
+      DB_NAME: ${POSTGRES_DB:-jagasekolah}
+      POOL_MODE: transaction
+      AUTH_TYPE: scram-sha-256
+      MAX_CLIENT_CONN: "1000"
+      DEFAULT_POOL_SIZE: "20"
+      # transaction mode tak boleh cache prepared statements server-side.
+      # Prisma menangani ini via ?pgbouncer=true di DATABASE_URL.
+      SERVER_RESET_QUERY: DISCARD ALL
+    # Image edoburu/pgbouncer LISTEN di container:5432 -> expose ke host:6432.
+    ports:
+      - "6432:5432"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -p 5432 -U ${POSTGRES_USER:-jaga}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
   app:
     build: .
     ports:
       - "3000:3000"
     environment:
-      - DATABASE_URL=file:./dev.db
+      # Runtime via PgBouncer (transaction pooling).
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-jaga}:${POSTGRES_PASSWORD:-jaga_dev_pwd}@pgbouncer:5432/${POSTGRES_DB:-jagasekolah}?pgbouncer=true
+      # Koneksi langsung untuk `prisma migrate deploy` / seed saat startup.
+      - DIRECT_URL=postgresql://${POSTGRES_USER:-jaga}:${POSTGRES_PASSWORD:-jaga_dev_pwd}@postgres:5432/${POSTGRES_DB:-jagasekolah}
+      - DATABASE_PROVIDER=postgresql
       - AUTH_SECRET=${AUTH_SECRET:-demo-secret-ganti-di-produksi}
       - AUTH_URL=http://localhost:3000
       - ML_SERVICE_URL=${ML_SERVICE_URL:-}
-    volumes:
-      - jagasekolah-data:/app/prisma
+    depends_on:
+      pgbouncer:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
     restart: unless-stopped
 
   # FASE 2 (opsional) - aktifkan dengan: docker compose --profile ml up
@@ -21,4 +78,4 @@ services:
     restart: unless-stopped
 
 volumes:
-  jagasekolah-data:
+  jagasekolah-pgdata:

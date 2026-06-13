@@ -12,7 +12,7 @@
 | Framework | **Next.js (App Router)** full-stack — frontend + backend (Route Handlers / Server Actions) jadi satu. |
 | Backend terpisah? | **Tidak untuk MVP.** Logika & scoring rule-based jalan di Next.js (TypeScript). |
 | ML prediksi | **Fase 2 (opsional)** — service **Python (FastAPI) terpisah** dipanggil via HTTP; MVP tanpa ML. |
-| DB + ORM | **SQLite + Prisma** (MVP/demo) → PostgreSQL (opsional skala). |
+| DB + ORM | **PostgreSQL + Prisma**, di belakang **PgBouncer** (transaction pooling). `DATABASE_URL` via pooler (`?pgbouncer=true`), `DIRECT_URL` langsung untuk migrasi/seed. |
 | Mesin prediksi | **Rule-based dulu (TypeScript).** ML hanya nilai tambah. |
 | Offline/PWA | **Serwist** (next-pwa successor) + **Dexie/IndexedDB** + sync queue. |
 | Sync konflik | **Optimistic locking (version) + idempotency key + last-write-wins fallback** (perbaikan review). |

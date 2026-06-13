@@ -1,14 +1,24 @@
 # Deploy — Standar Produksi Nasional
 
-> Backend ini dibangun **Postgres-ready** namun verifikasi lokal memakai SQLite.
-> Item bertanda ⚙️ butuh INFRASTRUKTUR nyata (tidak bisa diuji di lingkungan dev tanpa server).
+> Backend ini berjalan di **PostgreSQL di belakang PgBouncer** (transaction pooling)
+> baik di dev maupun produksi. Item bertanda ⚙️ butuh INFRASTRUKTUR terkelola
+> (managed PgBouncer/KMS/Redis) untuk skala nasional.
 
-## 1. Database (PostgreSQL) ⚙️
-- Ganti `prisma/schema.prisma` datasource `provider = "postgresql"` + set `DATABASE_PROVIDER=postgresql`.
-- `DATABASE_URL` sertakan pooling: `?connection_limit=20&pool_timeout=20`.
-- Pakai **PgBouncer** / Prisma Accelerate untuk koneksi pooling skala nasional.
-- Jalankan `prisma migrate deploy`.
-- **Partial unique index** (lihat migration `*_partial_unique_isLatest`) menjamin 1 risiko `isLatest` per siswa — di Postgres ini hard-constraint.
+## 1. Database (PostgreSQL + PgBouncer)
+- Datasource `prisma/schema.prisma` sudah `provider = "postgresql"` + `directUrl`.
+- **Dua URL wajib:**
+  - `DATABASE_URL` → via PgBouncer (transaction pooling), **wajib** `?pgbouncer=true`
+    agar Prisma menonaktifkan prepared statements (tak kompatibel transaction mode).
+  - `DIRECT_URL` → koneksi langsung ke Postgres untuk `prisma migrate deploy` & seed.
+- Tuning pool produksi di `DATABASE_URL`: `&connection_limit=20&pool_timeout=20`.
+- Managed pooler ⚙️: PgBouncer terkelola / Prisma Accelerate / Supavisor.
+- Jalankan `prisma migrate deploy` (lewat `DIRECT_URL`).
+- **Partial unique index** (migration `*_init_postgres`) menjamin 1 risiko `isLatest`
+  per `(siswaId,kategori)` — hard-constraint di level DB.
+
+> Dev lokal cepat: `docker compose up -d postgres pgbouncer` (Postgres :5432, PgBouncer :6432).
+> Bila host 5432 sudah terpakai: `POSTGRES_HOST_PORT=55432 docker compose up -d postgres pgbouncer`
+> dan set `DIRECT_URL` ke port itu.
 
 ## 2. Concurrency
 - `withSerialLock` (in-process mutex) melindungi recompute di single-instance.
@@ -32,7 +42,7 @@
 - `/api/health` untuk liveness/readiness probe (k8s/load balancer).
 
 ## 7. Yang MASIH perlu sebelum go-live nasional
-- [ ] Server Postgres + PgBouncer + backup terjadwal ⚙️
+- [ ] Managed PgBouncer/pooler + backup terjadwal ⚙️ (wiring Postgres+PgBouncer sudah default)
 - [ ] Redis untuk rate-limit terdistribusi ⚙️
 - [ ] KMS untuk master key ⚙️
 - [ ] Penetration test + audit keamanan independen
