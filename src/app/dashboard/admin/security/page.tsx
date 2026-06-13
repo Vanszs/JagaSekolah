@@ -4,7 +4,10 @@ import { prisma } from "@/lib/db";
 import { requireDashboardContext } from "@/lib/session";
 import { requireRole } from "@/lib/rbac";
 import { audit } from "@/lib/audit";
-import { PageHeader, StatTile } from "@/components/dashboard/ui";
+import { consentBySekolah } from "@/lib/analytics";
+import { PageHeader, StatTile, Panel } from "@/components/dashboard/ui";
+import { RiskDonutChart } from "@/components/charts/recharts/RiskDonutChart";
+import { ConsentSchoolTable } from "@/components/dashboard/ConsentSchoolTable";
 
 export const dynamic = "force-dynamic";
 
@@ -35,11 +38,12 @@ export default async function SecurityPage() {
   const ctx = await requireDashboardContext("/dashboard/admin/security");
   requireRole(ctx, "superadmin");
 
-  const [consentGrouped, totalSiswa, encAktif, encTotal] = await Promise.all([
+  const [consentGrouped, totalSiswa, encAktif, encTotal, consentSekolah] = await Promise.all([
     prisma.siswa.groupBy({ by: ["consentStatus"], _count: true }),
     prisma.siswa.count(),
     prisma.encryptionKey.count({ where: { aktif: true } }),
     prisma.encryptionKey.count(),
+    consentBySekolah(),
   ]);
 
   await audit(ctx, "view_security", "security:overview");
@@ -133,6 +137,24 @@ export default async function SecurityPage() {
           </>
         )}
       </section>
+
+      {/* Kepatuhan consent per sekolah */}
+      {totalSiswa > 0 && (
+        <section className="mt-6 grid gap-6 lg:grid-cols-[2fr_3fr]">
+          <Panel title="Komposisi persetujuan" desc="Sebaran status di seluruh platform.">
+            <RiskDonutChart
+              data={[
+                { name: "Disetujui", value: consentCount("granted"), key: "hijau" },
+                { name: "Menunggu", value: consentCount("pending"), key: "kuning" },
+                { name: "Dicabut", value: consentCount("revoked"), key: "merah" },
+              ]}
+            />
+          </Panel>
+          <Panel title="Kepatuhan per sekolah" desc="Sekolah dengan kepatuhan terendah perlu ditindaklanjuti. Klik untuk telusuri.">
+            <ConsentSchoolTable rows={consentSekolah} />
+          </Panel>
+        </section>
+      )}
 
       {/* Retensi */}
       <section className="mt-6 rounded-xl border border-slate-200 bg-white p-5">

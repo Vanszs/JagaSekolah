@@ -1,4 +1,4 @@
-import { ScrollText } from "lucide-react";
+import { Suspense } from "react";
 import { prisma } from "@/lib/db";
 import { requireDashboardContext } from "@/lib/session";
 import { requireRole } from "@/lib/rbac";
@@ -6,102 +6,112 @@ import { roleLabel } from "@/lib/nav";
 import { audit } from "@/lib/audit";
 import { aksiLabel } from "@/lib/auditLabels";
 import { fmtDateTime } from "@/lib/format";
-import { PageHeader, StatTile, EmptyState } from "@/components/dashboard/ui";
+import { auditActivityTrend, auditByAksi } from "@/lib/analytics";
+import { PageHeader, StatTile, Panel, ChartSkeleton } from "@/components/dashboard/ui";
+import { SingleAreaChart } from "@/components/charts/recharts/SingleAreaChart";
+import { HorizontalBarChart } from "@/components/charts/recharts/HorizontalBarChart";
+import { AuditTable } from "@/components/dashboard/AuditTable";
 
 export const dynamic = "force-dynamic";
 
 /**
- * Audit Log (Superadmin) — jejak aktivitas append-only (UU PDP): siapa,
- * melakukan apa, terhadap apa, kapan, dari IP mana.
+ * Audit Log (Superadmin) — jejak aktivitas append-only (UU PDP): tren aktivitas,
+ * komposisi jenis aksi, dan tabel rinci siapa-apa-kapan-dari mana.
  */
 export default async function AuditPage() {
   const ctx = await requireDashboardContext("/dashboard/admin/audit");
   requireRole(ctx, "superadmin");
-
-  const sejak24 = new Date(Date.now() - 24 * 60 * 60 * 1000);
-  const sejak7h = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-
-  const [logs, total, count24, count7h] = await Promise.all([
-    prisma.auditLog.findMany({
-      orderBy: { timestamp: "desc" },
-      take: 100,
-      select: {
-        id: true,
-        aksi: true,
-        target: true,
-        ip: true,
-        timestamp: true,
-        user: { select: { nama: true, role: true } },
-      },
-    }),
-    prisma.auditLog.count(),
-    prisma.auditLog.count({ where: { timestamp: { gte: sejak24 } } }),
-    prisma.auditLog.count({ where: { timestamp: { gte: sejak7h } } }),
-  ]);
-
   await audit(ctx, "view_audit", "audit:list");
 
   return (
-    <>
+    <div className="space-y-8">
       <PageHeader
         title="Audit Log"
         desc="Jejak aktivitas sistem yang tidak dapat diubah — dasar akuntabilitas dan kepatuhan UU PDP."
       />
 
-      <div className="grid gap-4 sm:grid-cols-3">
-        <StatTile label="Total entri" value={total.toLocaleString("id-ID")} accent="brand" />
-        <StatTile label="24 jam terakhir" value={count24} accent="brand" />
-        <StatTile label="7 hari terakhir" value={count7h} accent="brand" />
+      <Suspense fallback={<KpiSkeleton />}>
+        <AuditKpis />
+      </Suspense>
+
+      <div className="grid gap-6 lg:grid-cols-[3fr_2fr]">
+        <Panel title="Tren aktivitas (14 hari)" desc="Volume aktivitas tercatat per hari.">
+          <Suspense fallback={<ChartSkeleton h={220} />}>
+            <TrendSection />
+          </Suspense>
+        </Panel>
+        <Panel title="Jenis aktivitas terbanyak" desc="Komposisi aksi tercatat.">
+          <Suspense fallback={<ChartSkeleton h={220} />}>
+            <AksiSection />
+          </Suspense>
+        </Panel>
       </div>
 
-      {logs.length === 0 ? (
-        <div className="mt-8">
-          <EmptyState
-            icon={<ScrollText className="h-6 w-6" aria-hidden="true" />}
-            title="Belum ada aktivitas"
-            desc="Audit log akan terisi saat pengguna mengakses atau mengubah data."
-          />
-        </div>
-      ) : (
-        <div className="mt-8 overflow-hidden rounded-xl border border-slate-200 bg-white">
-          <div className="overflow-x-auto">
-            <table className="min-w-full text-sm">
-              <thead className="border-b border-slate-100 text-[11px] uppercase tracking-wide text-slate-400">
-                <tr>
-                  <th scope="col" className="px-4 py-3 text-left font-medium">Waktu</th>
-                  <th scope="col" className="px-4 py-3 text-left font-medium">Pengguna</th>
-                  <th scope="col" className="px-4 py-3 text-left font-medium">Aktivitas</th>
-                  <th scope="col" className="px-4 py-3 text-left font-medium">Target</th>
-                  <th scope="col" className="px-4 py-3 text-left font-medium">IP</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {logs.map((l) => (
-                  <tr key={l.id} className="transition-colors hover:bg-slate-50">
-                    <td className="whitespace-nowrap px-4 py-3 text-xs tabular-nums text-slate-500">
-                      <time dateTime={l.timestamp.toISOString()}>{fmtDateTime(l.timestamp)}</time>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className="font-medium text-slate-900">{l.user.nama}</span>
-                      <span className="block text-xs text-slate-400">{roleLabel(l.user.role)}</span>
-                    </td>
-                    <td className="px-4 py-3 text-slate-700">{aksiLabel(l.aksi)}</td>
-                    <td className="px-4 py-3">
-                      <span className="font-mono text-xs text-slate-500">{l.target}</span>
-                    </td>
-                    <td className="px-4 py-3 font-mono text-xs text-slate-400">{l.ip ?? "—"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
+      <Panel title="Jejak aktivitas terbaru" desc="100 entri terakhir. Log bersifat append-only.">
+        <Suspense fallback={<ChartSkeleton h={240} />}>
+          <AuditTableSection />
+        </Suspense>
+      </Panel>
+    </div>
+  );
+}
 
-      <p className="mt-4 text-xs text-slate-400">
-        Menampilkan {logs.length} entri terbaru. Log bersifat append-only dan disimpan sesuai
-        kebijakan retensi.
-      </p>
-    </>
+async function AuditKpis() {
+  const sejak24 = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  const sejak7h = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  const [total, count24, count7h, penggunaAktif] = await Promise.all([
+    prisma.auditLog.count(),
+    prisma.auditLog.count({ where: { timestamp: { gte: sejak24 } } }),
+    prisma.auditLog.count({ where: { timestamp: { gte: sejak7h } } }),
+    prisma.auditLog.findMany({ where: { timestamp: { gte: sejak7h } }, select: { userId: true }, distinct: ["userId"] }),
+  ]);
+  return (
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <StatTile label="Total entri" value={total.toLocaleString("id-ID")} accent="brand" />
+      <StatTile label="24 jam terakhir" value={count24.toLocaleString("id-ID")} accent="brand" />
+      <StatTile label="7 hari terakhir" value={count7h.toLocaleString("id-ID")} accent="brand" />
+      <StatTile label="Pengguna aktif (7h)" value={penggunaAktif.length.toLocaleString("id-ID")} accent="hijau" sub="punya aktivitas" />
+    </div>
+  );
+}
+
+async function TrendSection() {
+  const rows = await auditActivityTrend(14);
+  if (rows.every((r) => r.value === 0)) return <p className="text-sm text-slate-500">Belum ada aktivitas dalam 14 hari.</p>;
+  return <SingleAreaChart name="Aktivitas" data={rows} />;
+}
+
+async function AksiSection() {
+  const rows = await auditByAksi(8);
+  if (rows.length === 0) return <p className="text-sm text-slate-500">Belum ada aktivitas.</p>;
+  return <HorizontalBarChart seriesName="Entri" data={rows.map((r) => ({ label: aksiLabel(r.aksi), value: r.count }))} />;
+}
+
+async function AuditTableSection() {
+  const logs = await prisma.auditLog.findMany({
+    orderBy: { timestamp: "desc" },
+    take: 100,
+    select: { id: true, aksi: true, target: true, ip: true, timestamp: true, user: { select: { nama: true, role: true } } },
+  });
+  const rows = logs.map((l) => ({
+    id: l.id,
+    waktu: l.timestamp.toISOString(),
+    waktuLabel: fmtDateTime(l.timestamp),
+    pengguna: l.user.nama,
+    peran: roleLabel(l.user.role),
+    aksi: aksiLabel(l.aksi),
+    target: l.target,
+    ip: l.ip ?? "—",
+  }));
+  return <AuditTable rows={rows} />;
+}
+
+function KpiSkeleton() {
+  return (
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      {[0, 1, 2, 3].map((i) => (
+        <div key={i} className="h-24 animate-pulse rounded-xl bg-slate-100 motion-reduce:animate-none" />
+      ))}
+    </div>
   );
 }

@@ -1008,3 +1008,167 @@ export async function dropoutTrend(scope: RiskScope): Promise<{ label: string; v
 export async function dropoutTotal(scope: RiskScope): Promise<number> {
   return prisma.siswa.count({ where: { sudahDropout: true, ...scope } });
 }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   TAMBAHAN — analitik untuk HALAMAN ADMIN (tenant/users/audit/security).
+   Semua agregat, REAL, zero schema change.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ── TENANT: skala platform per provinsi ───────────────────────────────── */
+export interface PlatformProvinsi {
+  provinsi: string;
+  sekolah: number;
+  siswa: number;
+  pengguna: number;
+}
+
+export async function platformByProvinsi(): Promise<PlatformProvinsi[]> {
+  const sekolah = await prisma.sekolah.findMany({
+    select: {
+      wilayah: { select: { provinsi: true } },
+      _count: { select: { siswa: true, users: true } },
+    },
+  });
+  const map = new Map<string, PlatformProvinsi>();
+  for (const s of sekolah) {
+    const p = s.wilayah.provinsi;
+    const e = map.get(p) ?? { provinsi: p, sekolah: 0, siswa: 0, pengguna: 0 };
+    e.sekolah += 1;
+    e.siswa += s._count.siswa;
+    e.pengguna += s._count.users;
+    map.set(p, e);
+  }
+  return Array.from(map.values()).sort((a, b) => b.siswa - a.siswa);
+}
+
+/* ── TENANT: baris sekolah + komposisi risiko (semua wilayah) ──────────── */
+export interface SchoolRow {
+  id: string;
+  nama: string;
+  npsn: string;
+  provinsi: string;
+  kabupaten: string;
+  siswa: number;
+  pengguna: number;
+  merah: number;
+  kuning: number;
+  hijau: number;
+  aktif: boolean;
+}
+
+export async function schoolRiskRows(): Promise<SchoolRow[]> {
+  const [sekolah, grouped] = await Promise.all([
+    prisma.sekolah.findMany({
+      select: {
+        id: true,
+        nama: true,
+        npsn: true,
+        wilayah: { select: { provinsi: true, kabupaten: true } },
+        _count: { select: { siswa: true, users: true } },
+      },
+      orderBy: { nama: "asc" },
+    }),
+    prisma.risiko.groupBy({ by: ["sekolahId", "kategori"], where: { isLatest: true }, _count: true }),
+  ]);
+  const riskOf = new Map<string, { merah: number; kuning: number; hijau: number }>();
+  for (const g of grouped) {
+    const e = riskOf.get(g.sekolahId) ?? { merah: 0, kuning: 0, hijau: 0 };
+    e[g.kategori] += g._count;
+    riskOf.set(g.sekolahId, e);
+  }
+  return sekolah.map((s) => {
+    const r = riskOf.get(s.id) ?? { merah: 0, kuning: 0, hijau: 0 };
+    return {
+      id: s.id,
+      nama: s.nama,
+      npsn: s.npsn,
+      provinsi: s.wilayah.provinsi,
+      kabupaten: s.wilayah.kabupaten,
+      siswa: s._count.siswa,
+      pengguna: s._count.users,
+      merah: r.merah,
+      kuning: r.kuning,
+      hijau: r.hijau,
+      aktif: s._count.users > 0,
+    };
+  });
+}
+
+/* ── AUDIT: tren aktivitas harian (n hari) ─────────────────────────────── */
+export async function auditActivityTrend(days = 14): Promise<{ label: string; value: number }[]> {
+  const since = new Date();
+  since.setDate(since.getDate() - (days - 1));
+  since.setHours(0, 0, 0, 0);
+  const rows = await prisma.auditLog.findMany({
+    where: { timestamp: { gte: since } },
+    select: { timestamp: true },
+  });
+  const dayKey = (d: Date) => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+  const buckets = new Map<string, { label: string; value: number }>();
+  const now = new Date();
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
+    buckets.set(dayKey(d), { label: d.toLocaleDateString("id-ID", { day: "numeric", month: "short" }), value: 0 });
+  }
+  for (const r of rows) {
+    const b = buckets.get(dayKey(r.timestamp));
+    if (b) b.value += 1;
+  }
+  return Array.from(buckets.values());
+}
+
+/* ── AUDIT: breakdown jenis aksi ───────────────────────────────────────── */
+export async function auditByAksi(take = 8): Promise<{ aksi: string; count: number }[]> {
+  const grouped = await prisma.auditLog.groupBy({ by: ["aksi"], _count: true });
+  return grouped
+    .map((g) => ({ aksi: g.aksi, count: g._count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, take);
+}
+
+/* ── USERS: distribusi per peran (+ aktif/nonaktif) ────────────────────── */
+export interface RoleCount {
+  role: string;
+  total: number;
+  aktif: number;
+}
+
+export async function usersByRole(): Promise<RoleCount[]> {
+  const grouped = await prisma.user.groupBy({ by: ["role", "aktif"], _count: true });
+  const map = new Map<string, RoleCount>();
+  for (const g of grouped) {
+    const e = map.get(g.role) ?? { role: g.role, total: 0, aktif: 0 };
+    e.total += g._count;
+    if (g.aktif) e.aktif += g._count;
+    map.set(g.role, e);
+  }
+  return Array.from(map.values());
+}
+
+/* ── SECURITY: kepatuhan consent per sekolah ───────────────────────────── */
+export interface ConsentSchoolRow {
+  id: string;
+  nama: string;
+  granted: number;
+  pending: number;
+  revoked: number;
+  total: number;
+  pctGranted: number;
+}
+
+export async function consentBySekolah(): Promise<ConsentSchoolRow[]> {
+  const [sekolah, grouped] = await Promise.all([
+    prisma.sekolah.findMany({ select: { id: true, nama: true }, orderBy: { nama: "asc" } }),
+    prisma.siswa.groupBy({ by: ["sekolahId", "consentStatus"], _count: true }),
+  ]);
+  const map = new Map<string, ConsentSchoolRow>();
+  for (const s of sekolah) map.set(s.id, { id: s.id, nama: s.nama, granted: 0, pending: 0, revoked: 0, total: 0, pctGranted: 0 });
+  for (const g of grouped) {
+    const e = map.get(g.sekolahId);
+    if (!e) continue;
+    e[g.consentStatus] += g._count;
+    e.total += g._count;
+  }
+  for (const e of map.values()) e.pctGranted = e.total > 0 ? Math.round((e.granted / e.total) * 100) : 0;
+  return Array.from(map.values()).sort((a, b) => a.pctGranted - b.pctGranted);
+}

@@ -1,109 +1,101 @@
-import { Building2 } from "lucide-react";
+import { Suspense } from "react";
 import { prisma } from "@/lib/db";
 import { requireDashboardContext } from "@/lib/session";
 import { requireRole } from "@/lib/rbac";
 import { audit } from "@/lib/audit";
-import { PageHeader, StatTile, EmptyState } from "@/components/dashboard/ui";
+import { platformByProvinsi, schoolRiskRows } from "@/lib/analytics";
+import { PageHeader, StatTile, Panel, ChartSkeleton } from "@/components/dashboard/ui";
+import { HorizontalBarChart } from "@/components/charts/recharts/HorizontalBarChart";
+import { TenantTable } from "@/components/dashboard/TenantTable";
 
 export const dynamic = "force-dynamic";
 
 /**
- * Manajemen Tenant (Superadmin) — daftar sekolah, wilayah, jumlah siswa/pengguna,
- * dan status keaktifan tenant. "Aktif" = punya pengguna terdaftar (bisa login).
+ * Manajemen Tenant (Superadmin) — skala & sebaran sekolah di platform,
+ * komposisi risiko per sekolah, dan status keaktifan. Agregat (tanpa PII).
  */
 export default async function TenantPage() {
   const ctx = await requireDashboardContext("/dashboard/admin/tenant");
   requireRole(ctx, "superadmin");
-
-  const sekolah = await prisma.sekolah.findMany({
-    select: {
-      id: true,
-      npsn: true,
-      nama: true,
-      wilayah: { select: { provinsi: true, kabupaten: true } },
-      _count: { select: { siswa: true, users: true } },
-    },
-    orderBy: { nama: "asc" },
-  });
-
   await audit(ctx, "view_tenant", "tenant:all");
 
-  const aktif = sekolah.filter((s) => s._count.users > 0).length;
-  const totalSiswa = sekolah.reduce((a, s) => a + s._count.siswa, 0);
-
   return (
-    <>
+    <div className="space-y-8">
       <PageHeader
         title="Manajemen Tenant"
-        desc="Sekolah yang terdaftar di platform beserta status keaktifan dan cakupan datanya."
+        desc="Sekolah yang terdaftar di platform: sebaran wilayah, cakupan data, komposisi risiko, dan status keaktifan."
       />
 
-      <div className="grid gap-4 sm:grid-cols-3">
-        <StatTile label="Total sekolah" value={sekolah.length} accent="brand" />
-        <StatTile label="Tenant aktif" value={aktif} accent="hijau" sub="punya pengguna" />
-        <StatTile label="Siswa tercakup" value={totalSiswa.toLocaleString("id-ID")} accent="brand" />
+      <Suspense fallback={<KpiSkeleton n={4} />}>
+        <TenantKpis />
+      </Suspense>
+
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Panel title="Siswa terpantau per provinsi" desc="Cakupan data tiap provinsi.">
+          <Suspense fallback={<ChartSkeleton h={220} />}>
+            <SiswaProvSection />
+          </Suspense>
+        </Panel>
+        <Panel title="Jumlah sekolah per provinsi" desc="Sebaran tenant.">
+          <Suspense fallback={<ChartSkeleton h={220} />}>
+            <SekolahProvSection />
+          </Suspense>
+        </Panel>
       </div>
 
-      {sekolah.length === 0 ? (
-        <div className="mt-8">
-          <EmptyState
-            icon={<Building2 className="h-6 w-6" aria-hidden="true" />}
-            title="Belum ada sekolah"
-            desc="Daftarkan sekolah pertama untuk mengaktifkan pemantauan."
-          />
-        </div>
-      ) : (
-        <div className="mt-8 overflow-hidden rounded-xl border border-slate-200 bg-white">
-          <div className="overflow-x-auto">
-            <table className="min-w-full text-sm">
-              <thead className="border-b border-slate-100 text-[11px] uppercase tracking-wide text-slate-400">
-                <tr>
-                  <th scope="col" className="px-4 py-3 text-left font-medium">Sekolah</th>
-                  <th scope="col" className="px-4 py-3 text-left font-medium">Wilayah</th>
-                  <th scope="col" className="px-4 py-3 text-right font-medium">Siswa</th>
-                  <th scope="col" className="px-4 py-3 text-right font-medium">Pengguna</th>
-                  <th scope="col" className="px-4 py-3 text-left font-medium">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {sekolah.map((s) => {
-                  const isAktif = s._count.users > 0;
-                  return (
-                    <tr key={s.id} className="transition-colors hover:bg-slate-50">
-                      <td className="px-4 py-3.5">
-                        <span className="font-semibold text-slate-900">{s.nama}</span>
-                        <span className="ml-2 font-mono text-xs text-slate-400">NPSN {s.npsn}</span>
-                      </td>
-                      <td className="px-4 py-3.5 text-slate-600">
-                        {s.wilayah.kabupaten}, {s.wilayah.provinsi}
-                      </td>
-                      <td className="px-4 py-3.5 text-right tabular-nums text-slate-700">
-                        {s._count.siswa.toLocaleString("id-ID")}
-                      </td>
-                      <td className="px-4 py-3.5 text-right tabular-nums text-slate-700">{s._count.users}</td>
-                      <td className="px-4 py-3.5">
-                        <span
-                          className={`inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-xs font-medium ring-1 ring-inset ${
-                            isAktif
-                              ? "bg-emerald-50 text-emerald-700 ring-emerald-600/20"
-                              : "bg-slate-50 text-slate-500 ring-slate-400/20"
-                          }`}
-                        >
-                          <span
-                            className={`h-1.5 w-1.5 rounded-full ${isAktif ? "bg-emerald-500" : "bg-slate-400"}`}
-                            aria-hidden="true"
-                          />
-                          {isAktif ? "Aktif" : "Belum aktif"}
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-    </>
+      <Panel title="Daftar sekolah" desc="Urutkan kolom; klik nama sekolah untuk menelusuri kelas & siswa.">
+        <Suspense fallback={<ChartSkeleton h={240} />}>
+          <TenantTableSection />
+        </Suspense>
+      </Panel>
+    </div>
+  );
+}
+
+async function TenantKpis() {
+  const [agg, prov] = await Promise.all([
+    prisma.sekolah.findMany({ select: { _count: { select: { siswa: true, users: true } } } }),
+    platformByProvinsi(),
+  ]);
+  const total = agg.length;
+  const aktif = agg.filter((s) => s._count.users > 0).length;
+  const dormant = total - aktif;
+  const totalSiswa = agg.reduce((a, s) => a + s._count.siswa, 0);
+  const rataSiswa = total > 0 ? Math.round(totalSiswa / total) : 0;
+  return (
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <StatTile label="Total sekolah" value={total.toLocaleString("id-ID")} accent="brand" sub={`${prov.length} provinsi`} />
+      <StatTile label="Tenant aktif" value={aktif.toLocaleString("id-ID")} accent="hijau" sub={`${dormant} belum aktif`} />
+      <StatTile label="Siswa tercakup" value={totalSiswa.toLocaleString("id-ID")} accent="brand" sub={`rata-rata ${rataSiswa}/sekolah`} />
+      <StatTile label="Provinsi" value={prov.length.toLocaleString("id-ID")} accent="brand" sub="cakupan wilayah" />
+    </div>
+  );
+}
+
+async function SiswaProvSection() {
+  const rows = await platformByProvinsi();
+  if (rows.length === 0) return <p className="text-sm text-slate-500">Belum ada data.</p>;
+  return <HorizontalBarChart seriesName="Siswa" data={rows.slice(0, 12).map((r) => ({ label: r.provinsi, value: r.siswa }))} />;
+}
+
+async function SekolahProvSection() {
+  const rows = await platformByProvinsi();
+  if (rows.length === 0) return <p className="text-sm text-slate-500">Belum ada data.</p>;
+  const sorted = rows.toSorted((a, b) => b.sekolah - a.sekolah).slice(0, 12);
+  return <HorizontalBarChart seriesName="Sekolah" data={sorted.map((r) => ({ label: r.provinsi, value: r.sekolah }))} />;
+}
+
+async function TenantTableSection() {
+  const rows = await schoolRiskRows();
+  return <TenantTable rows={rows} />;
+}
+
+function KpiSkeleton({ n }: { n: number }) {
+  return (
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      {Array.from({ length: n }, (_, i) => (
+        <div key={i} className="h-24 animate-pulse rounded-xl bg-slate-100 motion-reduce:animate-none" />
+      ))}
+    </div>
   );
 }
