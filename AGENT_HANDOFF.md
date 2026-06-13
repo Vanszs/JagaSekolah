@@ -1,6 +1,6 @@
 # AGENT HANDOFF — JagaSekolah
 
-> Catatan progres untuk AI agent berikutnya. Diperbarui 2026-06-13 (sesi 2).
+> Catatan progres untuk AI agent berikutnya. Diperbarui 2026-06-14 (sesi 3).
 > Baca ini dulu sebelum bekerja. Konteks proyek lengkap ada di `PLAN.md`,
 > `ARCHITECTURE.md`, `DEPLOY.md`. Ringkasan produk di `README.md`.
 
@@ -51,33 +51,38 @@ unit test 43→274, fix `configVersion`, authCore extract + phantom-ui skeleton.
 | `0fa4b41` | **feat(dashboard)**: Recharts charts + dashboard per-role (NationalOverview aggregate-only, Dinas anonim, Kepsek, Guru/BK); breadcrumb drill-down Nasional→Provinsi→Kabupaten→Sekolah→Kelas→Siswa; superadmin pages tenant/users(+baru)/audit/security; analytics layer; seed snapshot historis 12 bulan; doctor.config. |
 | `1669267` | chore: gitignore screenshot/playwright artifacts. |
 
+**Sesi 3 (terbaru) — dashboard maksimal per role:**
+| Commit | Isi |
+|--------|-----|
+| `feat: Recharts 3.x + superadmin analytics + grouped nav` | upgrade Recharts 2.15.4→3.8.1; 5 komponen chart baru (StackedArea/HorizontalBar/Histogram/HeatmapTable/MultiLine) + SortableTable; +22 fungsi analytics (akademik/demografi/dropout + risk/attendance/intervention per-provinsi); nav bergrup per role; superadmin pages Analisis Risiko/Demografi/Putus Sekolah + shared Akademik/Kehadiran/Intervensi. |
+| `feat: sync page + dinas perbandingan & laporan` | /admin/sync (recompute+SyncLog+import); dinas /perbandingan (ranking) + /laporan (CSV export, no PII). |
+| `feat: kepsek pages + roster RBAC fix` | /kelas, /kelola/users (reuse CreateUserForm), /kelola/kelas; roster RBAC kepsek own-school. |
+| `feat: intervention CRUD UI + consent` | IntervensiManager + ConsentManager di /siswa/[id]; /consent page bk/kepsek. |
+
+**Verified sesi 3:** tsc clean · 340 test · build OK (19 hal) · react-doctor 100/100 ·
+browser superadmin Analisis Risiko (KPI+histogram+faktor real data, 0 console error).
+
 ---
 
 ## 3. STATUS SAAT INI
 
-- **Working tree CLEAN.** `tsc` bersih · **332 test / 0 fail** · `npm run build` sukses ·
-  **react-doctor 100/100**.
-- DB Postgres+PgBouncer berjalan via Docker, sudah di-migrate + seed (data sintetis:
-  1 provinsi, 1 kabupaten, 2 sekolah, 85 siswa, 12 bulan snapshot risiko historis).
-- Dashboard tiap role sudah chart-rich & tepat peran (superadmin agregat nasional,
-  dinas regional anonim, kepsek sekolah, guru/bk fokus aksi). Drill-down superadmin OK.
+- **Working tree CLEAN.** tsc bersih · **340 test / 0 fail** · build OK · react-doctor 100/100.
+- **Sidebar final per role**: superadmin 12 (3-grup ANALITIK/PLATFORM/KEAMANAN),
+  dinas 6, kepsek 8 (2-grup SEKOLAH/KELOLA), guru 5, bk 6. Semua route punya halaman
+  nyata (no dead link).
+- Dashboard maksimal: tiap menu berisi penuh (KPI + multi-chart + tabel sortable).
+  Akademik (model Nilai), Demografi (gender/KIP/jarak), Putus Sekolah — dimensi data
+  yang sebelumnya tak terpakai kini divisualisasikan (REAL).
 
-### ⚠️ SISA / belum dikerjakan (hasil audit gap sidebar, sesi 2)
-Audit 5-POV (lihat ringkasan) menemukan **gap UI** (bukan data — API/data sudah ada):
-1. **P0 — Intervensi CRUD tanpa UI**: `POST/PATCH/DELETE /api/intervensi` LENGKAP
-   (auth, zod, optimistic lock, audit) tapi **tak ada form/tombol**. Guru & BK TIDAK
-   bisa mencatat tindak lanjut dari web. → bangun form di `/dashboard/siswa/[id]`.
-2. **P0 — Kepsek**: RBAC mengizinkan kepsek membuat akun guru/BK tapi TAK ada menu
-   sidebar (form `/dashboard/admin/users/baru` hanya via URL); roster kelas
-   (`/dashboard/sekolah/[id]/kelas/[kelasId]`) superadmin-only → kepsek tak bisa
-   klik ke kelasnya. → tambah menu "Kelola Pengguna" + longgarkan RBAC roster utk kepsek.
-3. **P0 — Dinas** (cuma 2 menu): butuh Peringkat/Perbandingan Sekolah + Laporan/Ekspor.
-4. **P0 — Superadmin**: trigger Hitung-Ulang Risiko (`/api/risiko/recompute` ada, no UI)
-   + Status Sinkronisasi (SyncLog ada, no UI).
-5. **NEEDS-DATA (JANGAN bangun tanpa skema)**: funnel/outcome/success-rate intervensi
-   (Intervensi tak punya tahap/hasil), jadwal konseling, rujukan, geo-heatmap
-   (Wilayah/Sekolah tak punya lat/lng), alert-threshold config, announcement.
-6. **Belum `git push`**.
+### ⚠️ SISA / belum dikerjakan
+1. **DEFERRED (butuh endpoint PATCH baru, bukan dead-link)**: tenant create/edit form
+   (POST /api/admin/sekolah ada, belum ada UI form+GET-edit), user aktif/nonaktif+revoke
+   (perlu PATCH /api/admin/users/[id] dgn aktif/tokenVersion — belum ada), import upload UI
+   (POST /api/import ada, baru pointer). Tidak ada dead-link krn bukan item sidebar terpisah.
+2. **NEEDS-DATA (JANGAN bangun)**: funnel/outcome/success-rate intervensi, jadwal konseling,
+   rujukan, geo-heatmap (tak ada lat/lng), alert-threshold, announcement, last-login.
+3. `/dashboard/agregat` lama masih di disk (tak ada di nav lagi; harmless, bisa dihapus).
+4. **Belum `git push`**.
 
 ---
 
@@ -135,6 +140,39 @@ Audit 5-POV (lihat ringkasan) menemukan **gap UI** (bukan data — API/data suda
 - **JANGAN buat** funnel/outcome/success-rate intervensi atau geo-heatmap — tak ada datanya.
   NationalOverview tampilkan placeholder jujur.
 
+### Dashboard maksimal (sesi 3) — komponen & halaman baru
+- **Recharts 3.8.1** (upgrade). GOTCHA: Tooltip `formatter` v3 = `(v)=>` dgn `v: ValueType|undefined`
+  → pakai `Number(v)`, JANGAN `(v:number)`.
+- **Komponen chart baru** (`src/components/charts/recharts/`): `StackedAreaChart`
+  {data,series:[{key,name,color}]}, `HorizontalBarChart` {data:[{label,value,color?}],seriesName,unit?,barColor?},
+  `Histogram` {data:[{bin,count}],xLabel?}, `HeatmapTable` {columns,rows:[{label,values[]}],mode:'intensity'|'delta'},
+  `MultiLineChart` {data,series} + `LINE_PALETTE`.
+- **`SortableTable`** (`src/components/dashboard/SortableTable.tsx`): generik `<T>`, kolom
+  {key,header,sortValue?,cell?,align?,numeric?}, aria-sort, `hrefFor` → kolom-1 jadi Link drill-down.
+  Banyak wrapper tabel pakai ini: ProvinceRiskTable, AcademicProvinceTable, AttendanceProvinceTable,
+  CoverageProvinceTable, SchoolCompareTable, KelasRiskTable, SchoolUsersTable, KelolaKelasTable,
+  ConsentStudentsTable, SyncLogTable.
+- **`src/lib/dashboardScope.ts`**: `analyticsScope(ctx)` — scope lintas-peran utk halaman
+  shared (dinas DIIZINKAN tapi agregat via `{sekolah:{wilayahId}}`, beda dgn siswaScope yg 403-kan dinas);
+  `isAggregateRole(role)` (superadmin|dinas → tampilkan tabel per-provinsi).
+- **+22 fungsi analytics** (`src/lib/analytics.ts`, semua REAL scope-aware): lihat blok analytics —
+  risk (scoreDistribution/sourceBreakdown/deltaByProvinsi/factorTrendMonthly), kehadiran
+  (trendMonthly/statusDist/dailyAlpa/byProvinsi/chronicByProvinsi), intervensi
+  (coverageByProvinsi/trendByJenis/topIntervenors), akademik dari model **Nilai**
+  (gradeByMapel/belowKkmByMapel/gradeTrendByPeriode/academicByProvinsi), demografi
+  (riskByGender/riskByKip/distanceDistribution — HANYA field non-terenkripsi), dropout
+  (byProvinsi/trend/total). Kernel bucket murni di `analyticsBuckets.ts` (di-test).
+- **Halaman baru**: superadmin /analisis-risiko /demografi /putus-sekolah /admin/sync;
+  SHARED (scope-aware, semua role) /akademik /kehadiran /intervensi; dinas /perbandingan /laporan;
+  kepsek /kelas /kelola/users /kelola/kelas; bk /consent. Halaman superadmin-only pakai
+  `redirect("/dashboard")` bila role salah.
+- **CRUD UI di /siswa/[id]**: `IntervensiManager` (POST/PATCH/DELETE /api/intervensi,
+  optimistic-lock `baseVersion`, edit milik sendiri atau kepsek/superadmin via `canEditAll`),
+  `ConsentManager` (POST /api/consent granted/revoked). Detail fetch +version+olehUserId+consentStatus.
+- **RBAC fix**: `/dashboard/sekolah/[id]/kelas/[kelasId]` kini `requireRole(superadmin,kepsek)`
+  + `assertSameSekolah` (kepsek boleh roster sekolahnya).
+- **ui.tsx** ekspor `Panel` + `ChartSkeleton` (dipakai semua halaman analitik baru).
+
 ### Scoring (rule-based)
 - `src/lib/scoring/`: features, buildInput, rules, explain, thresholds, types.
 - **`Risiko.alasanJson` = `{ alasan: AlasanItem[], saran: string[] }`**, `AlasanItem={kode,pesan,bobot}`.
@@ -168,10 +206,10 @@ Audit 5-POV (lihat ringkasan) menemukan **gap UI** (bukan data — API/data suda
 - Import modul via alias `@/` (→ `src/`).
 - **TANPA Prisma/DB/network di unit test** — pakai pure function + dependency injection
   (lihat pola `tests/authCore.test.ts` ports, `tests/applySync.test.ts` SyncPort).
-- Saat ini **332 test / 0 fail**. File test: authCore, api, rules, rules-scenarios,
+- Saat ini **340 test / 0 fail**. File test: authCore, api, rules, rules-scenarios,
   features, buildInput, explain, thresholds, columnMap, parse, nav, rateLimit, rbac,
-  cleaning, envelope, applySync. (crypto.test.ts DIHAPUS — modul `crypto.ts` mati,
-  diganti `envelope.ts`+`siswaPII.ts`.)
+  cleaning, envelope, applySync, analyticsBuckets. (crypto.test.ts DIHAPUS — modul
+  `crypto.ts` mati, diganti `envelope.ts`+`siswaPII.ts`.)
 
 ---
 
@@ -264,7 +302,7 @@ purple/indigo gradient + Inter di mana-mana + centered hero + dual CTA simetris
 POSTGRES_HOST_PORT=55432 docker compose up -d postgres pgbouncer
 npm run db:migrate && npm run db:seed
 
-npm test                            # 332 pass (node:test, tanpa DB)
+npm test                            # 340 pass (node:test, tanpa DB)
 npx tsc --noEmit -p tsconfig.json   # bersih
 npx react-doctor@latest             # WAJIB 100/100
 npm run build                       # butuh DATABASE_URL Postgres
