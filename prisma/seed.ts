@@ -159,14 +159,25 @@ async function main() {
   ]);
 
   // ===== Users (semua role + tenant) =====
-  const ph = await bcrypt.hash("password123", 10);
+  // Password default per-role dari env (fallback: SEED_PASSWORD, lalu "password123" utk dev lokal).
+  const pwFor = (role: string) =>
+    process.env[`SEED_PASSWORD_${role.toUpperCase()}`] ||
+    process.env.SEED_PASSWORD ||
+    "password123";
+  const [phSuper, phDinas, phKepsek, phGuru, phBk] = await Promise.all([
+    bcrypt.hash(pwFor("superadmin"), 10),
+    bcrypt.hash(pwFor("dinas"), 10),
+    bcrypt.hash(pwFor("kepsek"), 10),
+    bcrypt.hash(pwFor("guru"), 10),
+    bcrypt.hash(pwFor("bk"), 10),
+  ]);
   const [, , , guru, , bk] = await Promise.all([
-    prisma.user.create({ data: { nama: "Super Admin", email: "super@demo.test", passwordHash: ph, role: "superadmin" } }),
-    prisma.user.create({ data: { nama: "Dinas Pendidikan", email: "dinas@demo.test", passwordHash: ph, role: "dinas", wilayahId: wilayah.id } }),
-    prisma.user.create({ data: { nama: "Kepala SMP 1", email: "kepsek@demo.test", passwordHash: ph, role: "kepsek", sekolahId: sekolahA.id } }),
-    prisma.user.create({ data: { nama: "Wali VIII-A", email: "guru@demo.test", passwordHash: ph, role: "guru", sekolahId: sekolahA.id, kelasId: kelas8A.id } }),
-    prisma.user.create({ data: { nama: "Wali VIII-B", email: "guru2@demo.test", passwordHash: ph, role: "guru", sekolahId: sekolahA.id, kelasId: kelas8B.id } }),
-    prisma.user.create({ data: { nama: "Guru BK SMP 1", email: "bk@demo.test", passwordHash: ph, role: "bk", sekolahId: sekolahA.id } }),
+    prisma.user.create({ data: { nama: "Super Admin", email: "super@demo.test", passwordHash: phSuper, role: "superadmin" } }),
+    prisma.user.create({ data: { nama: "Dinas Pendidikan", email: "dinas@demo.test", passwordHash: phDinas, role: "dinas", wilayahId: wilayah.id } }),
+    prisma.user.create({ data: { nama: "Kepala SMP 1", email: "kepsek@demo.test", passwordHash: phKepsek, role: "kepsek", sekolahId: sekolahA.id } }),
+    prisma.user.create({ data: { nama: "Wali VIII-A", email: "guru@demo.test", passwordHash: phGuru, role: "guru", sekolahId: sekolahA.id, kelasId: kelas8A.id } }),
+    prisma.user.create({ data: { nama: "Wali VIII-B", email: "guru2@demo.test", passwordHash: phGuru, role: "guru", sekolahId: sekolahA.id, kelasId: kelas8B.id } }),
+    prisma.user.create({ data: { nama: "Guru BK SMP 1", email: "bk@demo.test", passwordHash: phBk, role: "bk", sekolahId: sekolahA.id } }),
   ]);
 
   // ===== Distribusi profil =====
@@ -242,7 +253,10 @@ async function main() {
   console.log(`Wilayah:1 Sekolah:2 Kelas:3 Siswa:${distribusi.length}`);
   console.log(`Risiko -> hijau:${tally.hijau} kuning:${tally.kuning} merah:${tally.merah}`);
   console.log(`Retrospektif: ${dropoutMerah}/${totalDropout} dropout terdeteksi MERAH (recall ~${recall}%)`);
-  console.log("Login (password123): super@ dinas@ kepsek@ guru@ guru2@ bk@ demo.test");
+  console.log(
+    "Login: super@ dinas@ kepsek@ guru@ guru2@ bk@ demo.test " +
+      "(password dari env SEED_PASSWORD_* / SEED_PASSWORD, default 'password123')"
+  );
   console.log("------------------------------------------------------");
 }
 
