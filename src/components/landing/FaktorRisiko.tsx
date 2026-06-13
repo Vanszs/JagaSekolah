@@ -2,43 +2,43 @@
 
 import { CalendarX, ClipboardList, GraduationCap, Wallet } from "lucide-react";
 import { Reveal } from "./Reveal";
-import { SectionHeading } from "./SectionHeading";
 
-const dominan = {
-  kode: "A",
-  icon: CalendarX,
-  judul: "Attendance — Kehadiran",
-  desc: "Ketidakhadiran yang menanjak adalah prediktor putus sekolah paling kuat. Alpa berturut-turut atau pola bolos di hari tertentu sering muncul berbulan-bulan sebelum seorang anak benar-benar berhenti.",
-  poin: ["% absen 30 hari terakhir", "Alpa beruntun", "Tren kehadiran menurun", "Pola bolos hari tertentu"],
-};
-
-const lain = [
+const faktor = [
+  {
+    kode: "A",
+    icon: CalendarX,
+    judul: "Attendance — Kehadiran",
+    desc: "Ketidakhadiran yang menanjak adalah prediktor putus sekolah paling kuat — sering muncul berbulan-bulan sebelum anak benar-benar berhenti.",
+    poin: ["% absen 30 hari", "Alpa beruntun", "Tren menurun"],
+    rail: "bg-rose-400",
+    chip: "bg-rose-50 text-rose-700 ring-rose-100",
+  },
   {
     kode: "B",
     icon: ClipboardList,
     judul: "Behavior — Perilaku",
-    desc: "Keterlibatan di kelas menurun sebelum nilai ikut turun.",
-    poin: ["Tugas tidak dikumpulkan", "Partisipasi rendah", "Catatan pelanggaran"],
-    tone: "bg-amber-50 ring-amber-100 text-amber-700",
-    dot: "bg-amber-400",
+    desc: "Keterlibatan di kelas menurun sebelum nilai ikut turun: tugas tak dikumpulkan, partisipasi rendah, catatan pelanggaran bertambah.",
+    poin: ["Tugas tak dikumpulkan", "Partisipasi rendah", "Catatan disiplin"],
+    rail: "bg-amber-400",
+    chip: "bg-amber-50 text-amber-700 ring-amber-100",
   },
   {
     kode: "C",
     icon: GraduationCap,
     judul: "Course — Akademik",
-    desc: "Performa akademik yang melemah antar periode.",
-    poin: ["Nilai turun antar periode", "Mapel di bawah KKM", "Riwayat tinggal kelas"],
-    tone: "bg-blue-50 ring-blue-100 text-blue-700",
-    dot: "bg-blue-400",
+    desc: "Performa akademik melemah antar periode: banyak mapel di bawah KKM, atau pernah tinggal kelas.",
+    poin: ["Nilai turun", "Mapel < KKM", "Tinggal kelas"],
+    rail: "bg-blue-400",
+    chip: "bg-blue-50 text-blue-700 ring-blue-100",
   },
   {
     kode: "+",
     icon: Wallet,
     judul: "Konteks Lokal Indonesia",
-    desc: "Faktor khas yang memperberat: ekonomi keluarga, jarak ke sekolah, status keluarga, risiko menikah atau bekerja dini.",
+    desc: "Faktor khas yang memperberat risiko: ekonomi keluarga, jarak ke sekolah, status keluarga, hingga risiko menikah atau bekerja dini.",
     poin: ["Ekonomi (KIP/PKH)", "Jarak rumah–sekolah", "Status keluarga"],
-    tone: "bg-emerald-50 ring-emerald-100 text-[#005D4C]",
-    dot: "bg-emerald-400",
+    rail: "bg-[#005D4C]",
+    chip: "bg-emerald-50 text-[#005D4C] ring-emerald-100",
   },
 ];
 
@@ -46,89 +46,67 @@ export default function FaktorRisiko() {
   return (
     <section id="faktor-risiko" className="py-24 bg-slate-50 border-t border-slate-200/70">
       <div className="max-w-6xl mx-auto px-6 lg:px-8">
-        <SectionHeading
-          align="left"
-          eyebrow="Faktor Risiko Putus Sekolah"
-          title="Kerangka ABC + konteks lokal"
-          desc="Prediktor putus sekolah yang sudah tervalidasi riset internasional — Attendance, Behavior, Course — diadaptasi dengan faktor konteks Indonesia."
-        />
-
-        {/* Bento: cell A dominan 2x2 + tiga cell kecil */}
-        <div className="grid grid-cols-1 gap-5 md:grid-cols-3 md:auto-rows-fr">
-          <Reveal className="md:col-span-2 md:row-span-2">
-            <article className="h-full bg-[#005D4C] rounded-2xl p-8 flex flex-col justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-14 h-14 rounded-xl bg-white/10 ring-1 ring-white/15 flex items-center justify-center">
-                  <dominan.icon className="w-7 h-7 text-white" aria-hidden="true" />
+        <div className="grid gap-12 lg:grid-cols-[5fr_7fr] lg:items-start">
+          {/* Intro kiri */}
+          <Reveal className="lg:sticky lg:top-28">
+            <span className="inline-flex items-center gap-2 font-mono text-xs font-semibold uppercase tracking-wide mb-4 text-[#005D4C]">
+              <span className="h-px w-6 bg-[#005D4C]/40" aria-hidden="true" />
+              Faktor Risiko Putus Sekolah
+            </span>
+            <h2 className="font-display font-bold text-[2rem] sm:text-[2.5rem] leading-[1.12] tracking-tight text-[#0F172A]">
+              Kerangka ABC<br className="hidden sm:block" /> + konteks lokal
+            </h2>
+            <p className="mt-5 text-base sm:text-lg leading-relaxed text-slate-600 max-w-prose">
+              JagaSekolah memakai kerangka <strong className="text-slate-800">ABC</strong> — Attendance,
+              Behavior, Course — prediktor putus sekolah yang sudah tervalidasi riset internasional, lalu
+              diadaptasi dengan faktor konteks Indonesia.
+            </p>
+            <dl className="mt-8 grid grid-cols-3 gap-4 border-t border-slate-200 pt-6">
+              {[
+                { n: "3", l: "Sinyal inti" },
+                { n: "A·B·C", l: "Kerangka" },
+                { n: "+1", l: "Konteks lokal" },
+              ].map((s) => (
+                <div key={s.l}>
+                  <dt className="font-display font-bold text-xl text-[#005D4C] tabular-nums">{s.n}</dt>
+                  <dd className="text-xs text-slate-500 mt-0.5">{s.l}</dd>
                 </div>
-                <span className="font-mono text-base font-semibold text-emerald-200 bg-white/10 rounded-md px-2.5 py-1">
-                  {dominan.kode}
-                </span>
-              </div>
-              <div className="mt-8">
-                <h3 className="font-display font-bold text-2xl text-white mb-3">{dominan.judul}</h3>
-                <p className="text-[15px] text-teal-50/90 leading-relaxed mb-6 max-w-md">{dominan.desc}</p>
-                <ul className="grid grid-cols-2 gap-2">
-                  {dominan.poin.map((p) => (
-                    <li key={p} className="flex items-center gap-2 text-sm text-teal-50/85">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-300 shrink-0" aria-hidden="true" />
-                      {p}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </article>
+              ))}
+            </dl>
           </Reveal>
 
-          {lain.map((f, i) => {
-            const Icon = f.icon;
-            const wide = f.kode === "+";
-            return (
-              <Reveal key={f.judul} delay={(i + 1) * 0.08} className={wide ? "md:col-span-3" : ""}>
-                {wide ? (
-                  <article className="h-full bg-white border border-slate-200 rounded-2xl p-6 flex flex-col sm:flex-row sm:items-center gap-5 transition-shadow duration-200 hover:shadow-md">
-                    <div className="shrink-0 sm:max-w-xs">
-                      <div className="flex items-center gap-3 mb-3">
-                        <div className={`w-11 h-11 rounded-xl ring-1 flex items-center justify-center ${f.tone}`}>
-                          <Icon className="w-5 h-5" aria-hidden="true" />
-                        </div>
-                        <span className={`font-mono text-sm font-semibold rounded-md px-2 py-0.5 ${f.tone}`}>{f.kode}</span>
+          {/* Daftar faktor kanan — baris seragam dengan accent rail */}
+          <ol className="space-y-4">
+            {faktor.map((f, i) => {
+              const Icon = f.icon;
+              return (
+                <Reveal key={f.judul} delay={i * 0.08}>
+                  <li className="group relative flex gap-5 overflow-hidden rounded-2xl bg-white border border-slate-200 p-6 transition-shadow duration-200 hover:shadow-md">
+                    <span className={`absolute left-0 top-0 h-full w-1 ${f.rail}`} aria-hidden="true" />
+                    <div className="shrink-0">
+                      <div className="relative w-12 h-12 rounded-xl bg-slate-50 ring-1 ring-slate-100 flex items-center justify-center">
+                        <Icon className="w-6 h-6 text-slate-700" aria-hidden="true" />
+                        <span className={`absolute -top-2 -right-2 w-6 h-6 rounded-full ring-2 ring-white flex items-center justify-center font-mono text-[11px] font-bold ${f.chip}`}>
+                          {f.kode}
+                        </span>
                       </div>
-                      <h3 className="font-display font-semibold text-base text-[#0F172A] mb-1.5 leading-snug">{f.judul}</h3>
-                      <p className="text-sm text-slate-600 leading-relaxed">{f.desc}</p>
                     </div>
-                    <ul className="flex flex-wrap gap-2 sm:ml-auto">
-                      {f.poin.map((p) => (
-                        <li key={p} className="inline-flex items-center gap-1.5 text-sm text-slate-700 bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5">
-                          <span className={`w-1.5 h-1.5 rounded-full ${f.dot} shrink-0`} aria-hidden="true" />
-                          {p}
-                        </li>
-                      ))}
-                    </ul>
-                  </article>
-                ) : (
-                  <article className="h-full bg-white border border-slate-200 rounded-2xl p-6 flex flex-col transition-shadow duration-200 hover:shadow-md">
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className={`w-11 h-11 rounded-xl ring-1 flex items-center justify-center ${f.tone}`}>
-                        <Icon className="w-5 h-5" aria-hidden="true" />
-                      </div>
-                      <span className={`font-mono text-sm font-semibold rounded-md px-2 py-0.5 ${f.tone}`}>{f.kode}</span>
+                    <div className="min-w-0 flex-1">
+                      <h3 className="font-display font-semibold text-base text-[#0F172A] mb-1.5">{f.judul}</h3>
+                      <p className="text-[15px] text-slate-600 leading-relaxed mb-3">{f.desc}</p>
+                      <ul className="flex flex-wrap gap-2">
+                        {f.poin.map((p) => (
+                          <li key={p} className={`text-xs font-medium rounded-full px-2.5 py-1 ring-1 ${f.chip}`}>
+                            {p}
+                          </li>
+                        ))}
+                      </ul>
                     </div>
-                    <h3 className="font-display font-semibold text-base text-[#0F172A] mb-1.5 leading-snug">{f.judul}</h3>
-                    <p className="text-sm text-slate-600 leading-relaxed mb-4">{f.desc}</p>
-                    <ul className="mt-auto space-y-2 border-t border-slate-100 pt-4">
-                      {f.poin.map((p) => (
-                        <li key={p} className="flex items-center gap-2 text-sm text-slate-700">
-                          <span className={`w-1.5 h-1.5 rounded-full ${f.dot} shrink-0`} aria-hidden="true" />
-                          {p}
-                        </li>
-                      ))}
-                    </ul>
-                  </article>
-                )}
-              </Reveal>
-            );
-          })}
+                  </li>
+                </Reveal>
+              );
+            })}
+          </ol>
         </div>
       </div>
     </section>
