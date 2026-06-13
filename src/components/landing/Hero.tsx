@@ -6,7 +6,7 @@ import { ArrowRight } from "lucide-react";
 import { m, useReducedMotion } from "motion/react";
 import StatsCard from "./StatsCard";
 
-const heroBgImage = "/images/hero-bg.jpg";
+const heroBgImage = "/images/hero-bg-2.png";
 
 export default function Hero() {
   const reduce = useReducedMotion();
@@ -23,7 +23,7 @@ export default function Hero() {
           fill
           priority
           sizes="100vw"
-          className="object-cover object-[64%_center] lg:object-[center_30%]"
+          className="object-cover object-[72%_center] lg:object-center"
         />
         {/* Atmospheric readability washes — subtle, no hard vertical split */}
         {/* Top: lifts navbar + headline legibility (sky is already light) */}
