@@ -7,6 +7,12 @@ import {
   distanceBinIndex,
   DISTANCE_LABELS,
 } from "@/lib/analyticsBuckets";
+import {
+  transformPlatformByProvinsi,
+  transformUsersByRole,
+  transformConsentBySekolah,
+  transformAuditByAksi,
+} from "@/lib/analyticsKernels";
 
 /**
  * Lapisan data analitik — SEMUA dari data nyata (Risiko snapshot historis,
@@ -1029,16 +1035,9 @@ export async function platformByProvinsi(): Promise<PlatformProvinsi[]> {
       _count: { select: { siswa: true, users: true } },
     },
   });
-  const map = new Map<string, PlatformProvinsi>();
-  for (const s of sekolah) {
-    const p = s.wilayah.provinsi;
-    const e = map.get(p) ?? { provinsi: p, sekolah: 0, siswa: 0, pengguna: 0 };
-    e.sekolah += 1;
-    e.siswa += s._count.siswa;
-    e.pengguna += s._count.users;
-    map.set(p, e);
-  }
-  return Array.from(map.values()).sort((a, b) => b.siswa - a.siswa);
+  return transformPlatformByProvinsi(
+    sekolah.map((s) => ({ provinsi: s.wilayah.provinsi, siswaCount: s._count.siswa, usersCount: s._count.users })),
+  );
 }
 
 /* ── TENANT: baris sekolah + komposisi risiko (semua wilayah) ──────────── */
@@ -1120,10 +1119,7 @@ export async function auditActivityTrend(days = 14): Promise<{ label: string; va
 /* ── AUDIT: breakdown jenis aksi ───────────────────────────────────────── */
 export async function auditByAksi(take = 8): Promise<{ aksi: string; count: number }[]> {
   const grouped = await prisma.auditLog.groupBy({ by: ["aksi"], _count: true });
-  return grouped
-    .map((g) => ({ aksi: g.aksi, count: g._count }))
-    .sort((a, b) => b.count - a.count)
-    .slice(0, take);
+  return transformAuditByAksi(grouped.map((g) => ({ aksi: g.aksi, count: g._count })), take);
 }
 
 /* ── USERS: distribusi per peran (+ aktif/nonaktif) ────────────────────── */
@@ -1135,14 +1131,7 @@ export interface RoleCount {
 
 export async function usersByRole(): Promise<RoleCount[]> {
   const grouped = await prisma.user.groupBy({ by: ["role", "aktif"], _count: true });
-  const map = new Map<string, RoleCount>();
-  for (const g of grouped) {
-    const e = map.get(g.role) ?? { role: g.role, total: 0, aktif: 0 };
-    e.total += g._count;
-    if (g.aktif) e.aktif += g._count;
-    map.set(g.role, e);
-  }
-  return Array.from(map.values());
+  return transformUsersByRole(grouped.map((g) => ({ role: g.role, aktif: g.aktif, count: g._count })));
 }
 
 /* ── SECURITY: kepatuhan consent per sekolah ───────────────────────────── */
@@ -1161,14 +1150,8 @@ export async function consentBySekolah(): Promise<ConsentSchoolRow[]> {
     prisma.sekolah.findMany({ select: { id: true, nama: true }, orderBy: { nama: "asc" } }),
     prisma.siswa.groupBy({ by: ["sekolahId", "consentStatus"], _count: true }),
   ]);
-  const map = new Map<string, ConsentSchoolRow>();
-  for (const s of sekolah) map.set(s.id, { id: s.id, nama: s.nama, granted: 0, pending: 0, revoked: 0, total: 0, pctGranted: 0 });
-  for (const g of grouped) {
-    const e = map.get(g.sekolahId);
-    if (!e) continue;
-    e[g.consentStatus] += g._count;
-    e.total += g._count;
-  }
-  for (const e of map.values()) e.pctGranted = e.total > 0 ? Math.round((e.granted / e.total) * 100) : 0;
-  return Array.from(map.values()).sort((a, b) => a.pctGranted - b.pctGranted);
+  return transformConsentBySekolah(
+    sekolah,
+    grouped.map((g) => ({ sekolahId: g.sekolahId, consentStatus: g.consentStatus, count: g._count })),
+  );
 }
