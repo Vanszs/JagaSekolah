@@ -1,4 +1,4 @@
-import { apiHandler, safeJson } from "@/lib/api";
+import { apiHandler, safeJson, rateLimit } from "@/lib/api";
 import { requireContext } from "@/lib/session";
 import { requireRole, assertSameSekolah, AuthError } from "@/lib/rbac";
 import { prisma } from "@/lib/db";
@@ -18,11 +18,13 @@ const ItemSchema = z.object({
 const BodySchema = z.object({ items: z.array(ItemSchema).min(1).max(100) });
 
 export async function POST(req: Request) {
-  return apiHandler(async () => {
-    const ctx = await requireContext();
-    requireRole(ctx, "guru", "bk", "kepsek");
+  return apiHandler(
+    async () => {
+      const ctx = await requireContext();
+      requireRole(ctx, "guru", "bk", "kepsek");
+      await rateLimit(`sync:${ctx.userId}`);
 
-    const body = BodySchema.parse(await safeJson(req));
+      const body = BodySchema.parse(await safeJson(req));
 
     // Validasi semua siswa milik tenant (anti lintas sekolah/kelas)
     const siswaIds = [...new Set(body.items.map((i) => i.siswaId))];
@@ -90,5 +92,7 @@ export async function POST(req: Request) {
     const results = await applySyncBatch(port, body.items);
     await audit(ctx, "sync", `items:${results.length}`, clientIp(req));
     return { results };
-  });
+    },
+    { req, route: "POST /api/sync" }
+  );
 }

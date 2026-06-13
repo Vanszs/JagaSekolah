@@ -26,9 +26,14 @@ export default function Phantom({
 
   useEffect(() => {
     let alive = true;
-    import("@aejkatappaja/phantom-ui").then(() => {
-      if (alive) setReady(true);
-    });
+    import("@aejkatappaja/phantom-ui")
+      .then(() => {
+        if (alive) setReady(true);
+      })
+      .catch(() => {
+        // Gagal memuat web component (mis. chunk error di dev) -> jangan
+        // crash; cukup render konten apa adanya tanpa shimmer.
+      });
     return () => {
       alive = false;
     };

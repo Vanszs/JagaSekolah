@@ -20,6 +20,15 @@ export function buildSaran(alasan: AlasanItem[]): string[] {
   if (kode.has("disiplin") || kode.has("partisipasi") || kode.has("tugas")) {
     saran.push("Koordinasi dengan Guru BK untuk konseling motivasi & keterlibatan.");
   }
+  if (kode.has("telat")) {
+    saran.push("Telusuri penyebab keterlambatan (transportasi/jadwal); sepakati solusi dengan siswa & orang tua.");
+  }
+  if (kode.has("tinggal_kelas")) {
+    saran.push("Beri pendampingan ekstra & target belajar yang jelas; pantau kemajuan tiap pekan.");
+  }
+  if (kode.has("jarak")) {
+    saran.push("Evaluasi opsi transportasi/jam masuk; koordinasi dengan orang tua soal akses ke sekolah.");
+  }
   if (kode.has("keluarga_rentan")) {
     saran.push("Libatkan wali/keluarga; pertimbangkan dukungan psikososial.");
   }

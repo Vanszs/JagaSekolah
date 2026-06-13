@@ -1,4 +1,4 @@
-import { apiHandler } from "@/lib/api";
+import { apiHandler, rateLimit } from "@/lib/api";
 import { requireContext } from "@/lib/session";
 import { prisma } from "@/lib/db";
 import { signOut } from "@/lib/auth";
@@ -13,6 +13,7 @@ export async function POST(req: Request) {
   return apiHandler(
     async () => {
       const ctx = await requireContext();
+      await rateLimit(`logout:${ctx.userId}`);
       await Promise.all([
         prisma.user.update({
           where: { id: ctx.userId },

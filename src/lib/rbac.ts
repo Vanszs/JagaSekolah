@@ -71,3 +71,33 @@ export function assertSameSekolah(ctx: TenantContext, sekolahId: string): void {
     throw new AuthError(403, "Akses lintas sekolah ditolak.");
   }
 }
+
+/**
+ * SUMBER KEBENARAN: peran apa yang boleh DIBUAT oleh sebuah peran.
+ * - superadmin: membuat semua peran (dinas, kepsek, guru, bk) lintas tenant.
+ * - kepsek: hanya menambah guru & bk DI DALAM sekolahnya sendiri.
+ * - dinas/guru/bk: tidak boleh membuat akun.
+ * Dipakai oleh API (assertCanCreate) DAN UI (afford "Tambah Pengguna").
+ */
+const CREATABLE_BY: Record<Role, Role[]> = {
+  superadmin: ["dinas", "kepsek", "guru", "bk"],
+  kepsek: ["guru", "bk"],
+  dinas: [],
+  guru: [],
+  bk: [],
+};
+
+/** Daftar peran yang boleh dibuat oleh `role`. */
+export function creatableRoles(role: Role): Role[] {
+  return CREATABLE_BY[role];
+}
+
+/** Apakah `actor` boleh membuat akun ber-peran `target`? */
+export function canCreateUser(actor: Role, target: Role): boolean {
+  return CREATABLE_BY[actor].includes(target);
+}
+
+/** Apakah `role` boleh mengelola pengguna sama sekali (punya akses ke fitur tambah user)? */
+export function canManageUsers(role: Role): boolean {
+  return CREATABLE_BY[role].length > 0;
+}

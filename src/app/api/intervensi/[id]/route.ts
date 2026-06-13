@@ -26,10 +26,9 @@ async function loadOwned(ctx: Awaited<ReturnType<typeof requireContext>>, id: st
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   return apiHandler(
     async () => {
-      const ctx = await requireContext();
+      const [ctx, { id }] = await Promise.all([requireContext(), params]);
       requireRole(ctx, "guru", "bk", "kepsek");
       await rateLimit(`intervensi:${ctx.userId}`);
-      const { id } = await params;
       const body = PatchBody.parse(await safeJson(req));
       await loadOwned(ctx, id);
 
@@ -55,6 +54,7 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
     async () => {
       const [ctx, { id }] = await Promise.all([requireContext(), params]);
       requireRole(ctx, "guru", "bk", "kepsek");
+      await rateLimit(`intervensi:${ctx.userId}`);
       await loadOwned(ctx, id);
       await Promise.all([
         prisma.intervensi.update({ where: { id }, data: { deletedAt: new Date() } }),

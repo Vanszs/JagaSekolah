@@ -5,6 +5,9 @@ import {
   agregatScope,
   assertSameSekolah,
   requireRole,
+  creatableRoles,
+  canCreateUser,
+  canManageUsers,
   AuthError,
   type TenantContext,
 } from "@/lib/rbac";
@@ -81,5 +84,46 @@ describe("requireRole", () => {
   });
   it("lolos jika role diizinkan", () => {
     expect(() => requireRole(ctx({ role: "bk" }), "bk", "kepsek")).not.toThrow();
+  });
+});
+
+describe("creatableRoles / canCreateUser (siapa boleh menambah user)", () => {
+  it("superadmin boleh membuat semua peran", () => {
+    expect(creatableRoles("superadmin")).toEqual(["dinas", "kepsek", "guru", "bk"]);
+    for (const r of ["dinas", "kepsek", "guru", "bk"] as const) {
+      expect(canCreateUser("superadmin", r)).toBe(true);
+    }
+  });
+
+  it("kepsek hanya boleh membuat guru & bk", () => {
+    expect(creatableRoles("kepsek")).toEqual(["guru", "bk"]);
+    expect(canCreateUser("kepsek", "guru")).toBe(true);
+    expect(canCreateUser("kepsek", "bk")).toBe(true);
+    expect(canCreateUser("kepsek", "kepsek")).toBe(false);
+    expect(canCreateUser("kepsek", "dinas")).toBe(false);
+  });
+
+  it("dinas, guru, bk TIDAK boleh membuat akun apa pun", () => {
+    for (const actor of ["dinas", "guru", "bk"] as const) {
+      expect(creatableRoles(actor)).toEqual([]);
+      expect(canManageUsers(actor)).toBe(false);
+      for (const target of ["dinas", "kepsek", "guru", "bk"] as const) {
+        expect(canCreateUser(actor, target)).toBe(false);
+      }
+    }
+  });
+
+  it("canManageUsers true hanya untuk superadmin & kepsek", () => {
+    expect(canManageUsers("superadmin")).toBe(true);
+    expect(canManageUsers("kepsek")).toBe(true);
+    expect(canManageUsers("dinas")).toBe(false);
+    expect(canManageUsers("guru")).toBe(false);
+    expect(canManageUsers("bk")).toBe(false);
+  });
+
+  it("tak ada peran yang bisa membuat superadmin (cegah eskalasi privilese)", () => {
+    for (const actor of ["superadmin", "dinas", "kepsek", "guru", "bk"] as const) {
+      expect(creatableRoles(actor)).not.toContain("superadmin");
+    }
   });
 });

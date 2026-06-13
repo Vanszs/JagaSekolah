@@ -2,6 +2,7 @@ import { apiHandler } from "@/lib/api";
 import { requireContext } from "@/lib/session";
 import { siswaScope } from "@/lib/rbac";
 import { prisma } from "@/lib/db";
+import type { Prisma } from "@prisma/client";
 import { z } from "zod";
 
 const QuerySchema = z.object({
@@ -15,48 +16,57 @@ const QuerySchema = z.object({
  * Daftar siswa milik tenant + risiko terkini. Pagination + tanpa N+1.
  */
 export async function GET(req: Request) {
-  return apiHandler(async () => {
-    const ctx = await requireContext();
-    const where = siswaScope(ctx); // dinas -> 403
+  return apiHandler(
+    async () => {
+      const ctx = await requireContext();
+      const scope = siswaScope(ctx); // dinas -> 403
 
-    const url = new URL(req.url);
-    const { page, limit, kategori } = QuerySchema.parse(
-      Object.fromEntries(url.searchParams)
-    );
+      const url = new URL(req.url);
+      const { page, limit, kategori } = QuerySchema.parse(
+        Object.fromEntries(url.searchParams)
+      );
 
-    const [total, siswa] = await Promise.all([
-      prisma.siswa.count({ where }),
-      prisma.siswa.findMany({
-        where,
-        select: {
-          id: true,
-          nisn: true,
-          nama: true,
-          kelas: { select: { nama: true } },
-          // FIX N+1: ambil hanya risiko terkini dalam 1 query nested
-          risiko: {
-            where: { isLatest: true },
-            select: { kategori: true, skor: true, tanggalHitung: true },
-            take: 1,
+      // Filter kategori DI LEVEL DB (bukan setelah pagination) agar total &
+      // halaman konsisten.
+      const where: Prisma.SiswaWhereInput = {
+        ...(scope as Prisma.SiswaWhereInput),
+        ...(kategori
+          ? { risiko: { some: { isLatest: true, kategori } } }
+          : {}),
+      };
+
+      const [total, siswa] = await Promise.all([
+        prisma.siswa.count({ where }),
+        prisma.siswa.findMany({
+          where,
+          select: {
+            id: true,
+            nisn: true,
+            nama: true,
+            kelas: { select: { nama: true } },
+            // FIX N+1: ambil hanya risiko terkini dalam 1 query nested
+            risiko: {
+              where: { isLatest: true },
+              select: { kategori: true, skor: true, tanggalHitung: true },
+              take: 1,
+            },
           },
-        },
-        orderBy: { nama: "asc" },
-        skip: (page - 1) * limit,
-        take: limit,
-      }),
-    ]);
+          orderBy: { nama: "asc" },
+          skip: (page - 1) * limit,
+          take: limit,
+        }),
+      ]);
 
-    let data = siswa.map((s) => ({
-      id: s.id,
-      nisn: s.nisn,
-      nama: s.nama,
-      kelas: s.kelas.nama,
-      risiko: s.risiko[0] ?? null,
-    }));
+      const data = siswa.map((s) => ({
+        id: s.id,
+        nisn: s.nisn,
+        nama: s.nama,
+        kelas: s.kelas.nama,
+        risiko: s.risiko[0] ?? null,
+      }));
 
-    // filter kategori (opsional) - di level hasil halaman
-    if (kategori) data = data.filter((d) => d.risiko?.kategori === kategori);
-
-    return { data, meta: { total, page, limit, totalPages: Math.ceil(total / limit) } };
-  });
+      return { data, meta: { total, page, limit, totalPages: Math.ceil(total / limit) } };
+    },
+    { req, route: "GET /api/siswa" }
+  );
 }

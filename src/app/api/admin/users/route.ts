@@ -1,6 +1,6 @@
 import { apiHandler, safeJson, rateLimit } from "@/lib/api";
 import { requireContext } from "@/lib/session";
-import { requireRole, AuthError, type TenantContext } from "@/lib/rbac";
+import { requireRole, AuthError, canCreateUser, type TenantContext } from "@/lib/rbac";
 import { prisma } from "@/lib/db";
 import { audit, clientIp } from "@/lib/audit";
 import bcrypt from "bcryptjs";
@@ -17,11 +17,11 @@ const CreateBody = z.object({
   kelasId: z.string().optional(),
 });
 
-// Aturan siapa boleh membuat role apa.
+// Aturan siapa boleh membuat role apa — delegasi ke sumber kebenaran di rbac.ts.
 function assertCanCreate(ctx: TenantContext, role: Role) {
-  if (ctx.role === "superadmin") return; // boleh semua
-  if (ctx.role === "kepsek" && (role === "guru" || role === "bk")) return; // dalam sekolahnya
-  throw new AuthError(403, `Role ${ctx.role} tidak boleh membuat ${role}.`);
+  if (!canCreateUser(ctx.role, role)) {
+    throw new AuthError(403, `Role ${ctx.role} tidak boleh membuat ${role}.`);
+  }
 }
 
 /** GET /api/admin/users — superadmin: semua; kepsek: user sekolahnya. */

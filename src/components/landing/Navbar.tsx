@@ -1,13 +1,8 @@
 "use client";
 
-import { useState, useSyncExternalStore } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { Menu, X } from "lucide-react";
-
-interface NavbarProps {
-  activeSection?: string;
-  setActiveSection?: (sec: string) => void;
-}
 
 const navItems = [
   { id: "beranda", label: "Beranda" },
@@ -31,12 +26,33 @@ function useScrolled(threshold = 16) {
   );
 }
 
-export default function Navbar({ activeSection: activeProp, setActiveSection: setActiveProp }: NavbarProps) {
+export default function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [activeInternal, setActiveInternal] = useState("beranda");
+  const [activeSection, setActiveSection] = useState("beranda");
   const scrolled = useScrolled();
-  const activeSection = activeProp ?? activeInternal;
-  const setActiveSection = setActiveProp ?? setActiveInternal;
+
+  // Scroll-spy: sorot item nav sesuai section yang sedang terlihat.
+  useEffect(() => {
+    const sections = navItems
+      .map((i) => document.getElementById(i.id))
+      .filter((el): el is HTMLElement => el !== null);
+    if (sections.length === 0) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        let best: IntersectionObserverEntry | null = null;
+        for (const e of entries) {
+          if (e.isIntersecting && (!best || e.intersectionRatio > best.intersectionRatio)) {
+            best = e;
+          }
+        }
+        if (best) setActiveSection(best.target.id);
+      },
+      { rootMargin: "-45% 0px -45% 0px", threshold: [0, 0.25, 0.5, 1] },
+    );
+    sections.forEach((s) => observer.observe(s));
+    return () => observer.disconnect();
+  }, []);
 
   return (
     <nav

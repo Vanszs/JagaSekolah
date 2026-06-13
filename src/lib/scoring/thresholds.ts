@@ -11,6 +11,7 @@ export interface Thresholds {
   // Course
   nilaiTurunFlag: number; // poin
   mapelDiBawahKkmFlag: number;
+  pctTugasTidakKumpulFlag: number; // % tugas tak dikumpul yang memicu flag
   // Skor -> kategori
   skorKuning: number; // >= ini => minimal kuning
   skorMerah: number; // >= ini => merah
@@ -25,6 +26,7 @@ export const DEFAULT_THRESHOLDS: Thresholds = {
   telatKronisPerBulan: 6,
   nilaiTurunFlag: 10,
   mapelDiBawahKkmFlag: 3,
+  pctTugasTidakKumpulFlag: 50,
   skorKuning: 30,
   skorMerah: 60,
   bobot: {

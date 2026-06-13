@@ -41,7 +41,7 @@ export function scoreSiswa(
   if (f.partisipasiRendah) {
     add("partisipasi", "Partisipasi di kelas rendah.", b.partisipasiRendah!);
   }
-  if (f.pctTugasTidakKumpul >= 50) {
+  if (f.pctTugasTidakKumpul >= t.pctTugasTidakKumpulFlag) {
     add("tugas", `Banyak tugas tidak dikumpulkan (${f.pctTugasTidakKumpul.toFixed(0)}%).`, b.tugasTidakKumpul!);
   }
 

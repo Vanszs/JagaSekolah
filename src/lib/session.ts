@@ -21,14 +21,19 @@ export async function requireContext(): Promise<TenantContext> {
  * kedaluwarsa / dicabut, ALIHKAN ke /login secara mulus alih-alih melempar
  * error 401 yang memunculkan error page. Robust terhadap race expiry antara
  * render layout dan render page.
+ *
+ * Catatan: redirect() melempar error kontrol-alur Next, jadi TIDAK boleh
+ * dipanggil di dalam try/catch (akan tertelan). Kita tangkap 401 jadi sentinel
+ * null dulu, lalu redirect() di luar blok try.
  */
 export async function requireDashboardContext(next = "/dashboard"): Promise<TenantContext> {
+  let ctx: TenantContext | null = null;
   try {
-    return await requireContext();
+    ctx = await requireContext();
   } catch (e) {
-    if (e instanceof AuthError && e.code === 401) {
-      redirect(`/login?next=${encodeURIComponent(next)}`);
-    }
-    throw e;
+    if (!(e instanceof AuthError && e.code === 401)) throw e;
+    // ctx tetap null -> redirect di luar try.
   }
+  if (!ctx) redirect(`/login?next=${encodeURIComponent(next)}`);
+  return ctx;
 }
