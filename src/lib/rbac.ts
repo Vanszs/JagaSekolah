@@ -7,6 +7,8 @@ export interface TenantContext {
   sekolahId: string | null;
   wilayahId: string | null;
   kelasId: string | null;
+  /** Dinas tingkat provinsi: nama provinsi. null untuk pusat/kabupaten-spesifik. */
+  provinsi: string | null;
 }
 
 export class AuthError extends Error {
@@ -26,9 +28,36 @@ export function requireRole(ctx: TenantContext, ...roles: Role[]): void {
 }
 
 /**
+/**
+ * Tingkat dinas: 'pusat' (nasional), 'provinsi' (satu provinsi), 'kabupaten'
+ * (satu wilayah/kabupaten). Diturunkan dari field user:
+ *  - wilayahId terisi → kabupaten
+ *  - provinsi terisi (wilayahId null) → provinsi
+ *  - keduanya null → pusat
+ */
+export type DinasLevel = "pusat" | "provinsi" | "kabupaten";
+export function dinasLevel(ctx: TenantContext): DinasLevel {
+  if (ctx.wilayahId) return "kabupaten";
+  if (ctx.provinsi) return "provinsi";
+  return "pusat";
+}
+
+/** Filter Prisma Siswa untuk dinas sesuai tingkatnya. */
+function dinasSiswaWhere(ctx: TenantContext): Record<string, unknown> {
+  switch (dinasLevel(ctx)) {
+    case "kabupaten":
+      return { sekolah: { wilayahId: ctx.wilayahId } };
+    case "provinsi":
+      return { sekolah: { wilayah: { provinsi: ctx.provinsi } } };
+    case "pusat":
+      return {}; // nasional (seperti superadmin, tapi tanpa akses root)
+  }
+}
+
+/**
  * Filter Prisma `where` untuk data berbasis Siswa, DIPAKSA per tenant.
  * - superadmin: tanpa filter (akses penuh hingga siswa).
- * - dinas: dibatasi ke wilayahnya (boleh menelusuri hingga siswa DI WILAYAHNYA).
+ * - dinas: sesuai tingkat (pusat=nasional, provinsi=se-provinsi, kabupaten=se-wilayah).
  * - kepsek/bk: dibatasi ke sekolahId-nya.
  * - guru: dibatasi ke kelasId-nya (di dalam sekolahnya).
  */
@@ -37,8 +66,7 @@ export function siswaScope(ctx: TenantContext): Record<string, unknown> {
     case "superadmin":
       return {};
     case "dinas":
-      if (!ctx.wilayahId) throw new AuthError(403, "Wilayah tidak diketahui.");
-      return { sekolah: { wilayahId: ctx.wilayahId } };
+      return dinasSiswaWhere(ctx);
     case "kepsek":
     case "bk":
       if (!ctx.sekolahId) throw new AuthError(403, "Sekolah tidak diketahui.");
@@ -74,16 +102,29 @@ export function assertSameSekolah(ctx: TenantContext, sekolahId: string): void {
 }
 
 /**
- * Validasi bahwa wilayahId target sama dgn tenant dinas (cegah dinas mengakses
- * lintas wilayah). superadmin lolos. Dipakai pada drill-down sekolah/kelas/siswa.
+ * Validasi akses dinas ke sebuah wilayah (cegah lintas wilayah/provinsi).
+ * superadmin lolos. Dinas:
+ *  - pusat: lolos semua wilayah,
+ *  - provinsi: hanya wilayah yang provinsinya == ctx.provinsi,
+ *  - kabupaten: hanya wilayahId == ctx.wilayahId.
+ * Dipakai pada drill-down sekolah/kelas/siswa (yang punya wilayahId + provinsi).
  */
-export function assertSameWilayah(ctx: TenantContext, wilayahId: string): void {
+export function assertDinasWilayah(
+  ctx: TenantContext,
+  target: { wilayahId: string; provinsi: string },
+): void {
   if (ctx.role === "superadmin") return;
-  if (ctx.role === "dinas") {
-    if (ctx.wilayahId !== wilayahId) throw new AuthError(403, "Akses lintas wilayah ditolak.");
-    return;
+  if (ctx.role !== "dinas") throw new AuthError(403, "Akses ditolak.");
+  switch (dinasLevel(ctx)) {
+    case "pusat":
+      return;
+    case "provinsi":
+      if (ctx.provinsi !== target.provinsi) throw new AuthError(403, "Akses lintas provinsi ditolak.");
+      return;
+    case "kabupaten":
+      if (ctx.wilayahId !== target.wilayahId) throw new AuthError(403, "Akses lintas wilayah ditolak.");
+      return;
   }
-  throw new AuthError(403, "Akses ditolak.");
 }
 
 /**

@@ -77,6 +77,9 @@ model User {
   sekolah      Sekolah? @relation(fields: [sekolahId], references: [id])
   wilayahId    String?
   wilayah      Wilayah? @relation(fields: [wilayahId], references: [id])
+  // Dinas tingkat PROVINSI: provinsi diisi, wilayahId null. Dinas PUSAT: keduanya null.
+  // Dinas KABUPATEN: wilayahId diisi. (provinsi redundan utk kabupaten, boleh diisi.)
+  provinsi     String?
   kelasId      String?
   kelas        Kelas?   @relation("WaliKelas", fields: [kelasId], references: [id])
   // Session revocation: token dengan tokenVersion != ini dianggap invalid

@@ -1,7 +1,8 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { requireDashboardContext } from "@/lib/session";
-import { siswaScope, agregatScope } from "@/lib/rbac";
+import { siswaScope, dinasLevel } from "@/lib/rbac";
+import { analyticsScope } from "@/lib/dashboardScope";
 import NationalOverview from "@/components/dashboard/NationalOverview";
 import DinasDashboard from "@/components/dashboard/DinasDashboard";
 import SchoolDashboard from "@/components/dashboard/SchoolDashboard";
@@ -24,17 +25,23 @@ export default async function OverviewPage() {
     );
   }
 
-  // ── Dinas: analitik wilayah (anonim, agregat) ──
+  // ── Dinas: analitik agregat sesuai jenjang (pusat/provinsi/kabupaten) ──
   if (ctx.role === "dinas") {
-    const scope = agregatScope(ctx); // { wilayahId } (dinas selalu punya wilayah)
-    const wilayah = scope.wilayahId
-      ? await prisma.wilayah.findUnique({ where: { id: scope.wilayahId }, select: { provinsi: true, kabupaten: true } })
-      : null;
-    const where: Prisma.SiswaWhereInput = scope.wilayahId ? { sekolah: { wilayahId: scope.wilayahId } } : {};
+    const where = analyticsScope(ctx) as Prisma.SiswaWhereInput;
+    const level = dinasLevel(ctx);
+    let regionLabel: string;
+    if (level === "kabupaten" && ctx.wilayahId) {
+      const w = await prisma.wilayah.findUnique({ where: { id: ctx.wilayahId }, select: { provinsi: true, kabupaten: true } });
+      regionLabel = w ? `${w.kabupaten}, ${w.provinsi}` : "wilayah Anda";
+    } else if (level === "provinsi") {
+      regionLabel = `Provinsi ${ctx.provinsi}`;
+    } else {
+      regionLabel = "Nasional";
+    }
     return (
       <DinasDashboard
-        regionLabel={wilayah ? `${wilayah.kabupaten}, ${wilayah.provinsi}` : "wilayah Anda"}
-        wilayahId={scope.wilayahId ?? ""}
+        regionLabel={regionLabel}
+        wilayahId={ctx.wilayahId ?? ""}
         scope={where}
       />
     );

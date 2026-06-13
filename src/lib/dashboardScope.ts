@@ -17,8 +17,10 @@ export function analyticsScope(ctx: TenantContext): Prisma.SiswaWhereInput {
     case "superadmin":
       return {};
     case "dinas":
-      if (!ctx.wilayahId) throw new AuthError(403, "Wilayah tidak diketahui.");
-      return { sekolah: { wilayahId: ctx.wilayahId } };
+      // Tingkat dinas: pusat=nasional, provinsi=se-provinsi, kabupaten=se-wilayah.
+      if (ctx.wilayahId) return { sekolah: { wilayahId: ctx.wilayahId } };
+      if (ctx.provinsi) return { sekolah: { wilayah: { provinsi: ctx.provinsi } } };
+      return {};
     case "kepsek":
     case "bk":
       if (!ctx.sekolahId) throw new AuthError(403, "Sekolah tidak diketahui.");

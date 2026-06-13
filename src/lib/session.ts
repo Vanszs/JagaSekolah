@@ -13,6 +13,7 @@ export async function requireContext(): Promise<TenantContext> {
     sekolahId: session.user.sekolahId,
     wilayahId: session.user.wilayahId,
     kelasId: session.user.kelasId,
+    provinsi: session.user.provinsi,
   };
 }
 

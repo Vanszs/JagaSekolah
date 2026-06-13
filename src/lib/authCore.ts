@@ -20,6 +20,7 @@ export interface AuthUser {
   role: Role;
   sekolahId: string | null;
   wilayahId: string | null;
+  provinsi: string | null;
   kelasId: string | null;
   tokenVersion: number;
   aktif: boolean;
@@ -34,6 +35,7 @@ export interface AuthorizedUser {
   role: Role;
   sekolahId: string | null;
   wilayahId: string | null;
+  provinsi: string | null;
   kelasId: string | null;
   tokenVersion: number;
 }
@@ -66,6 +68,7 @@ export async function authorizeCredentials(
     role: user.role,
     sekolahId: user.sekolahId ?? null,
     wilayahId: user.wilayahId ?? null,
+    provinsi: user.provinsi ?? null,
     kelasId: user.kelasId ?? null,
     tokenVersion: user.tokenVersion,
   };
@@ -107,6 +110,7 @@ export interface JwtToken {
   role?: Role;
   sekolahId?: string | null;
   wilayahId?: string | null;
+  provinsi?: string | null;
   kelasId?: string | null;
   tokenVersion?: number;
   [k: string]: unknown;
@@ -130,6 +134,7 @@ export async function enrichJwt(
     token.role = user.role;
     token.sekolahId = user.sekolahId ?? null;
     token.wilayahId = user.wilayahId ?? null;
+    token.provinsi = user.provinsi ?? null;
     token.kelasId = user.kelasId ?? null;
     token.tokenVersion = user.tokenVersion;
     return token;
@@ -141,6 +146,7 @@ export async function enrichJwt(
       token.role = dbUser.role;
       token.sekolahId = dbUser.sekolahId ?? null;
       token.wilayahId = dbUser.wilayahId ?? null;
+      token.provinsi = dbUser.provinsi ?? null;
       token.kelasId = dbUser.kelasId ?? null;
       token.tokenVersion = dbUser.tokenVersion;
     }
@@ -153,6 +159,7 @@ export interface SessionUserShape {
   role: Role;
   sekolahId: string | null;
   wilayahId: string | null;
+  provinsi: string | null;
   kelasId: string | null;
 }
 
@@ -175,9 +182,10 @@ export async function buildSessionUser(
       role: (token.role as Role) ?? "guru",
       sekolahId: token.sekolahId ?? null,
       wilayahId: token.wilayahId ?? null,
+      provinsi: token.provinsi ?? null,
       kelasId: token.kelasId ?? null,
     };
   }
   // Dicabut / nonaktif / versi berubah -> kosongkan identitas tenant.
-  return { id: "", role: "guru", sekolahId: null, wilayahId: null, kelasId: null };
+  return { id: "", role: "guru", sekolahId: null, wilayahId: null, provinsi: null, kelasId: null };
 }

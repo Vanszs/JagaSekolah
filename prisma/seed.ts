@@ -165,6 +165,8 @@ async function main() {
   const sekolahA = sekolahByNpsn.get(NPSN_DEMO_A)!;
   const sekolahB = sekolahByNpsn.get(NPSN_DEMO_B)!;
   const wilayah = { id: sekolahA.wilayahId }; // dinas demo mengawasi wilayah sekolah A
+  const wilayahRow = await prisma.wilayah.findUnique({ where: { id: sekolahA.wilayahId }, select: { provinsi: true } });
+  const demoProvinsi = wilayahRow?.provinsi ?? "Jawa Timur";
 
   const [kelas8A, kelas8B, kelas9A] = await Promise.all([
     prisma.kelas.create({ data: { sekolahId: sekolahA.id, nama: "VIII-A" } }),
@@ -181,6 +183,8 @@ async function main() {
   const email = {
     super: process.env.SEED_EMAIL_SUPERADMIN || "super@demo.test",
     dinas: process.env.SEED_EMAIL_DINAS || "dinas@demo.test",
+    dinasProv: process.env.SEED_EMAIL_DINAS_PROV || "dinasprov@demo.test",
+    dinasPusat: process.env.SEED_EMAIL_DINAS_PUSAT || "dinaspusat@demo.test",
     kepsek: process.env.SEED_EMAIL_KEPSEK || "kepsek@demo.test",
     guru: process.env.SEED_EMAIL_GURU || "guru@demo.test",
     guru2: process.env.SEED_EMAIL_GURU2 || "guru2@demo.test",
@@ -193,9 +197,16 @@ async function main() {
     bcrypt.hash(pwFor("guru"), 10),
     bcrypt.hash(pwFor("bk"), 10),
   ]);
+  await Promise.all([
+    // Dinas PUSAT (nasional): wilayahId & provinsi null.
+    prisma.user.create({ data: { nama: "Dinas Pendidikan Pusat", email: email.dinasPusat, passwordHash: phDinas, role: "dinas" } }),
+    // Dinas PROVINSI: provinsi diisi, wilayahId null.
+    prisma.user.create({ data: { nama: `Dinas Provinsi ${demoProvinsi}`, email: email.dinasProv, passwordHash: phDinas, role: "dinas", provinsi: demoProvinsi } }),
+  ]);
   const [, , , guru, , bk] = await Promise.all([
     prisma.user.create({ data: { nama: "Super Admin", email: email.super, passwordHash: phSuper, role: "superadmin" } }),
-    prisma.user.create({ data: { nama: "Dinas Pendidikan", email: email.dinas, passwordHash: phDinas, role: "dinas", wilayahId: wilayah.id } }),
+    // Dinas KABUPATEN: wilayahId diisi.
+    prisma.user.create({ data: { nama: "Dinas Kabupaten", email: email.dinas, passwordHash: phDinas, role: "dinas", wilayahId: wilayah.id, provinsi: demoProvinsi } }),
     prisma.user.create({ data: { nama: "Kepala Sekolah", email: email.kepsek, passwordHash: phKepsek, role: "kepsek", sekolahId: sekolahA.id } }),
     prisma.user.create({ data: { nama: "Wali VIII-A", email: email.guru, passwordHash: phGuru, role: "guru", sekolahId: sekolahA.id, kelasId: kelas8A.id } }),
     prisma.user.create({ data: { nama: "Wali VIII-B", email: email.guru2, passwordHash: phGuru, role: "guru", sekolahId: sekolahA.id, kelasId: kelas8B.id } }),
@@ -316,7 +327,9 @@ async function main() {
   console.log(`Retrospektif: ${dropoutMerah}/${totalDropout} dropout terdeteksi MERAH (recall ~${recall}%)`);
   console.log("Login (email | role):");
   console.log(`  ${email.super}  | superadmin`);
-  console.log(`  ${email.dinas}  | dinas`);
+  console.log(`  ${email.dinasPusat}  | dinas (pusat/nasional)`);
+  console.log(`  ${email.dinasProv}  | dinas (provinsi)`);
+  console.log(`  ${email.dinas}  | dinas (kabupaten)`);
   console.log(`  ${email.kepsek} | kepsek`);
   console.log(`  ${email.guru}   | guru`);
   console.log(`  ${email.guru2}  | guru`);

@@ -10,13 +10,19 @@ const FORBIDDEN = "Tidak ditemukan atau akses ditolak.";
  * - dinas: hanya siswa yang sekolahnya berada di wilayahnya (butuh `wilayahId` siswa).
  * - kepsek/bk: sekolah sama. guru: sekolah + kelas sama.
  */
-export function authorizeResolvedSiswa<T extends { sekolahId: string; kelasId: string; wilayahId?: string | null }>(
+export function authorizeResolvedSiswa<T extends { sekolahId: string; kelasId: string; wilayahId?: string | null; provinsi?: string | null }>(
   ctx: TenantContext,
   siswa: T | null,
 ): T {
   if (!siswa) throw new AuthError(403, FORBIDDEN);
   if (ctx.role === "dinas") {
-    if (!ctx.wilayahId || siswa.wilayahId !== ctx.wilayahId) throw new AuthError(403, FORBIDDEN);
+    // Tingkat dinas: pusat (semua), provinsi (provinsi sama), kabupaten (wilayah sama).
+    if (ctx.wilayahId) {
+      if (siswa.wilayahId !== ctx.wilayahId) throw new AuthError(403, FORBIDDEN);
+    } else if (ctx.provinsi) {
+      if (siswa.provinsi !== ctx.provinsi) throw new AuthError(403, FORBIDDEN);
+    }
+    // pusat: lolos
     return siswa;
   }
   assertSameSekolah(ctx, siswa.sekolahId);
@@ -25,15 +31,22 @@ export function authorizeResolvedSiswa<T extends { sekolahId: string; kelasId: s
 }
 
 /**
- * Ambil siswa & pastikan milik tenant pemanggil (anti-IDOR + guru lintas-kelas + dinas lintas-wilayah).
+ * Ambil siswa & pastikan milik tenant pemanggil (anti-IDOR + guru lintas-kelas + dinas berjenjang).
  */
 export async function resolveSiswa(ctx: TenantContext, siswaId: string) {
   const siswa = await prisma.siswa.findUnique({
     where: { id: siswaId },
-    select: { id: true, sekolahId: true, kelasId: true, sekolah: { select: { wilayahId: true } } },
+    select: {
+      id: true,
+      sekolahId: true,
+      kelasId: true,
+      sekolah: { select: { wilayahId: true, wilayah: { select: { provinsi: true } } } },
+    },
   });
   return authorizeResolvedSiswa(
     ctx,
-    siswa ? { ...siswa, wilayahId: siswa.sekolah.wilayahId } : null,
+    siswa
+      ? { ...siswa, wilayahId: siswa.sekolah.wilayahId, provinsi: siswa.sekolah.wilayah.provinsi }
+      : null,
   );
 }

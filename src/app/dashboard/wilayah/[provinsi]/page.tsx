@@ -15,6 +15,10 @@ export default async function ProvinsiPage({ params }: { params: Promise<{ provi
   const provinsi = decodeURIComponent(raw);
   const ctx = await requireDashboardContext(`/dashboard/wilayah/${raw}`);
   requireRole(ctx, "superadmin", "dinas");
+  // Dinas provinsi/kabupaten hanya boleh provinsinya sendiri; pusat & superadmin lolos.
+  if (ctx.role === "dinas" && ctx.provinsi && ctx.provinsi !== provinsi) {
+    notFound();
+  }
 
   const kabupaten = await riskByKabupaten(provinsi);
   if (kabupaten.length === 0) notFound();

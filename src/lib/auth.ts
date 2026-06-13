@@ -82,6 +82,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         session.user.role = built.role as Role;
         session.user.sekolahId = built.sekolahId;
         session.user.wilayahId = built.wilayahId;
+        session.user.provinsi = built.provinsi;
         session.user.kelasId = built.kelasId;
       }
       return session;

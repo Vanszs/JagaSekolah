@@ -8,6 +8,7 @@ declare module "next-auth" {
       role: Role;
       sekolahId: string | null;
       wilayahId: string | null;
+      provinsi: string | null;
       kelasId: string | null;
     } & DefaultSession["user"];
   }
@@ -19,6 +20,7 @@ declare module "next-auth/jwt" {
     role?: Role;
     sekolahId?: string | null;
     wilayahId?: string | null;
+    provinsi?: string | null;
     kelasId?: string | null;
     tokenVersion?: number;
   }

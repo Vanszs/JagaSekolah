@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { ArrowRight } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { requireDashboardContext } from "@/lib/session";
-import { requireRole, assertSameSekolah, assertSameWilayah } from "@/lib/rbac";
+import { requireRole, assertSameSekolah, assertDinasWilayah } from "@/lib/rbac";
 import { audit } from "@/lib/audit";
 import { PageHeader, RiskBadge, EmptyState } from "@/components/dashboard/ui";
 import { Breadcrumbs } from "@/components/dashboard/Breadcrumbs";
@@ -29,7 +29,7 @@ export default async function KelasRosterPage({ params }: { params: Promise<{ id
   if (!kelas) notFound();
   // Tenant guard: kepsek = sekolahnya, dinas = wilayahnya (superadmin lolos keduanya).
   if (ctx.role === "kepsek") assertSameSekolah(ctx, sekolahId);
-  else if (ctx.role === "dinas") assertSameWilayah(ctx, kelas.sekolah.wilayahId);
+  else if (ctx.role === "dinas") assertDinasWilayah(ctx, { wilayahId: kelas.sekolah.wilayahId, provinsi: kelas.sekolah.wilayah.provinsi });
 
   const siswa = await prisma.siswa.findMany({
     where: { kelasId, sekolahId },

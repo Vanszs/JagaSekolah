@@ -19,6 +19,7 @@ const baseUser: AuthUser = {
   role: "guru",
   sekolahId: "sek1",
   wilayahId: null,
+  provinsi: null,
   kelasId: "kel1",
   tokenVersion: 0,
   aktif: true,
@@ -239,7 +240,7 @@ describe("buildSessionUser", () => {
       { uid: "u1", role: "guru", sekolahId: "sek1", kelasId: "kel1", tokenVersion: 0 },
       ports({ byId: { tokenVersion: 0, aktif: true } }),
     );
-    expect(s).toEqual({ id: "u1", role: "guru", sekolahId: "sek1", wilayahId: null, kelasId: "kel1" });
+    expect(s).toEqual({ id: "u1", role: "guru", sekolahId: "sek1", wilayahId: null, provinsi: null, kelasId: "kel1" });
   });
 
   it("tokenVersion mismatch (revoked) -> identity blanked", async () => {
@@ -247,7 +248,7 @@ describe("buildSessionUser", () => {
       { uid: "u1", role: "guru", sekolahId: "sek1", tokenVersion: 0 },
       ports({ byId: { tokenVersion: 5, aktif: true } }),
     );
-    expect(s).toEqual({ id: "", role: "guru", sekolahId: null, wilayahId: null, kelasId: null });
+    expect(s).toEqual({ id: "", role: "guru", sekolahId: null, wilayahId: null, provinsi: null, kelasId: null });
   });
 
   it("inactive user -> identity blanked", async () => {
@@ -471,7 +472,7 @@ describe("buildSessionUser — security invariants", () => {
       { uid: "u1", role: "kepsek", sekolahId: "sek1", wilayahId: "wil1", kelasId: "kel1", tokenVersion: 0 },
       ports({ byId: { tokenVersion: 9, aktif: true } }),
     );
-    expect(s).toEqual({ id: "", role: "guru", sekolahId: null, wilayahId: null, kelasId: null });
+    expect(s).toEqual({ id: "", role: "guru", sekolahId: null, wilayahId: null, provinsi: null, kelasId: null });
   });
 
   it("active + matching version never blanks a legitimate session", async () => {
@@ -479,6 +480,6 @@ describe("buildSessionUser — security invariants", () => {
       { uid: "u9", role: "bk", sekolahId: "sekX", wilayahId: null, kelasId: null, tokenVersion: 3 },
       ports({ byId: { tokenVersion: 3, aktif: true } }),
     );
-    expect(s).toEqual({ id: "u9", role: "bk", sekolahId: "sekX", wilayahId: null, kelasId: null });
+    expect(s).toEqual({ id: "u9", role: "bk", sekolahId: "sekX", wilayahId: null, provinsi: null, kelasId: null });
   });
 });

@@ -18,6 +18,7 @@ const ctx = (over: Partial<TenantContext>): TenantContext => ({
   sekolahId: null,
   wilayahId: null,
   kelasId: null,
+  provinsi: null,
   ...over,
 });
 
@@ -41,11 +42,14 @@ describe("siswaScope", () => {
     expect(siswaScope(ctx({ role: "superadmin" }))).toEqual({});
   });
 
-  it("dinas → wilayah-scoped {sekolah:{wilayahId}} (telusur siswa dalam wilayah)", () => {
+  it("dinas KABUPATEN → {sekolah:{wilayahId}}", () => {
     expect(siswaScope(ctx({ role: "dinas", wilayahId: "w1" }))).toEqual({ sekolah: { wilayahId: "w1" } });
   });
-  it("dinas tanpa wilayahId → 403", () => {
-    expect(() => siswaScope(ctx({ role: "dinas" }))).toThrow(AuthError);
+  it("dinas PROVINSI → {sekolah:{wilayah:{provinsi}}}", () => {
+    expect(siswaScope(ctx({ role: "dinas", provinsi: "Jawa Timur" }))).toEqual({ sekolah: { wilayah: { provinsi: "Jawa Timur" } } });
+  });
+  it("dinas PUSAT (tanpa wilayah/provinsi) → {} (nasional)", () => {
+    expect(siswaScope(ctx({ role: "dinas" }))).toEqual({});
   });
 
   it("guru tanpa kelas -> 403", () => {
