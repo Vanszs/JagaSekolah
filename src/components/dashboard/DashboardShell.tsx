@@ -9,60 +9,90 @@ import {
   ShieldCheck,
   School,
   Building2,
-  Map,
   ScrollText,
+  AlertTriangle,
+  BookOpen,
+  CalendarDays,
+  PieChart,
+  HeartHandshake,
+  UserMinus,
+  RefreshCw,
+  LayoutGrid,
+  FileCheck2,
+  FileText,
+  GitCompare,
   Menu,
   X,
   LogOut,
   type LucideIcon,
 } from "lucide-react";
-import type { NavItem } from "@/lib/nav";
+import type { NavItem, ResolvedNavItem, NavSection } from "@/lib/nav";
+import { SECTION_LABEL } from "@/lib/nav";
 
 const ICONS: Record<NavItem["icon"], LucideIcon> = {
   home: Home,
-  users: Users,
-  shield: ShieldCheck,
+  alert: AlertTriangle,
+  book: BookOpen,
+  calendar: CalendarDays,
+  pie: PieChart,
+  handshake: HeartHandshake,
+  dropout: UserMinus,
   building: Building2,
-  map: Map,
+  users: Users,
+  sync: RefreshCw,
   audit: ScrollText,
+  shield: ShieldCheck,
+  grid: LayoutGrid,
+  consent: FileCheck2,
+  report: FileText,
+  compare: GitCompare,
 };
 
 interface Props {
-  nav: NavItem[];
+  nav: ResolvedNavItem[];
   user: { nama: string; roleLabel: string; sekolah?: string | null };
   children: React.ReactNode;
 }
 
-/** Daftar tautan navigasi — komponen modul-scope (tidak di-remount tiap render). */
+/** Daftar tautan navigasi dgn header section opsional — komponen modul-scope. */
 function NavList({
   nav,
   isActive,
   onNavigate,
 }: {
-  nav: NavItem[];
+  nav: ResolvedNavItem[];
   isActive: (href: string) => boolean;
   onNavigate?: () => void;
 }) {
+  let lastSection: NavSection | undefined | "__none" = "__none";
   return (
-    <nav aria-label="Menu utama" className="flex flex-1 flex-col gap-1 px-3 py-4">
+    <nav aria-label="Menu utama" className="flex flex-1 flex-col gap-0.5 overflow-y-auto px-3 py-4">
       {nav.map((item) => {
         const Icon = ICONS[item.icon];
         const active = isActive(item.href);
+        const showHeader = item.section && item.section !== lastSection;
+        lastSection = item.section;
         return (
-          <Link
-            key={item.href}
-            href={item.href}
-            onClick={onNavigate}
-            aria-current={active ? "page" : undefined}
-            className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-              active
-                ? "bg-[#005D4C]/10 text-[#005D4C]"
-                : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
-            }`}
-          >
-            <Icon className={`h-[18px] w-[18px] shrink-0 ${active ? "text-[#005D4C]" : "text-slate-400"}`} aria-hidden="true" />
-            {item.label}
-          </Link>
+          <div key={item.href}>
+            {showHeader && (
+              <p className="px-3 pb-1 pt-4 text-[11px] font-semibold uppercase tracking-wide text-slate-400 first:pt-0">
+                {SECTION_LABEL[item.section!]}
+              </p>
+            )}
+            <Link
+              href={item.href}
+              onClick={onNavigate}
+              aria-current={active ? "page" : undefined}
+              className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                active
+                  ? "bg-[#005D4C]/10 text-[#005D4C]"
+                  : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+              }`}
+            >
+              <Icon className={`h-[18px] w-[18px] shrink-0 ${active ? "text-[#005D4C]" : "text-slate-400"}`} aria-hidden="true" />
+              {item.label}
+            </Link>
+          </div>
         );
       })}
     </nav>
@@ -79,7 +109,7 @@ function SidebarInner({
   onLogout,
   onNavigate,
 }: {
-  nav: NavItem[];
+  nav: ResolvedNavItem[];
   user: Props["user"];
   initials: string;
   isActive: (href: string) => boolean;

@@ -17,6 +17,8 @@ import { RiskDonutChart } from "@/components/charts/recharts/RiskDonutChart";
 import { FactorBars } from "@/components/charts/recharts/FactorBars";
 import { CategoryBars } from "@/components/charts/recharts/Bars";
 import { SingleAreaChart } from "@/components/charts/recharts/SingleAreaChart";
+import { HorizontalBarChart } from "@/components/charts/recharts/HorizontalBarChart";
+import { CHART } from "@/components/charts/recharts/theme";
 
 /**
  * Overview Nasional (Superadmin) — AGREGAT SAJA, tanpa identitas siswa.
@@ -53,6 +55,12 @@ export default function NationalOverview() {
       <Panel title="Analisis faktor risiko nasional" desc="Mengapa siswa berisiko — jumlah siswa berisiko per faktor.">
         <Suspense fallback={<ChartSkeleton h={260} />}>
           <FactorSection />
+        </Suspense>
+      </Panel>
+
+      <Panel title="Provinsi dengan risiko tinggi terbanyak" desc="Lima provinsi teratas yang perlu perhatian.">
+        <Suspense fallback={<ChartSkeleton h={200} />}>
+          <TopProvinceSection />
         </Suspense>
       </Panel>
 
@@ -157,6 +165,19 @@ async function ProvinceSection() {
       firstColLabel="Provinsi"
       unitLabel="Sekolah"
       hrefFor={(r) => `/dashboard/wilayah/${encodeURIComponent(r.id)}`}
+    />
+  );
+}
+
+async function TopProvinceSection() {
+  const provinsi = await riskByProvinsi();
+  const top = provinsi.filter((p) => p.merah > 0).slice(0, 5);
+  if (top.length === 0) return <p className="text-sm text-slate-500">Belum ada provinsi dengan risiko tinggi.</p>;
+  return (
+    <HorizontalBarChart
+      seriesName="Risiko tinggi"
+      barColor={CHART.merah}
+      data={top.map((p) => ({ label: p.label, value: p.merah }))}
     />
   );
 }

@@ -3,96 +3,243 @@ import type { Role } from "@prisma/client";
 /** Nama ikon lucide-react yang didukung sidebar (dipetakan di DashboardShell). */
 export type NavIcon =
   | "home"
-  | "users"
-  | "shield"
+  | "alert"
+  | "book"
+  | "calendar"
+  | "pie"
+  | "handshake"
+  | "dropout"
   | "building"
-  | "map"
-  | "audit";
+  | "users"
+  | "sync"
+  | "audit"
+  | "shield"
+  | "grid"
+  | "consent"
+  | "report"
+  | "compare";
+
+/** Grup section di sidebar (header non-clickable). undefined = tanpa grup (flat). */
+export type NavSection = "analitik" | "platform" | "keamanan" | "sekolah" | "kelola";
 
 export interface NavItem {
   href: string;
   /** Label default; bisa di-override per-role lewat labelByRole. */
   label: string;
-  /** Override label untuk role tertentu (mis. "Dashboard Nasional" vs "Dashboard Kelas"). */
   labelByRole?: Partial<Record<Role, string>>;
   icon: NavIcon;
-  /** Role yang boleh melihat/mengunjungi item ini. */
   roles: Role[];
+  /** Grup section (hanya untuk role yg butuh; ditentukan per-role lewat sectionByRole). */
+  section?: NavSection;
+  sectionByRole?: Partial<Record<Role, NavSection>>;
 }
+
+/** Label section yang ditampilkan sebagai header grup. */
+export const SECTION_LABEL: Record<NavSection, string> = {
+  analitik: "Analitik",
+  platform: "Platform",
+  keamanan: "Keamanan",
+  sekolah: "Sekolah",
+  kelola: "Kelola",
+};
 
 /**
  * Menu dashboard per-role. Urutan = urutan tampil di sidebar.
  * Setiap href HARUS punya halaman nyata (tanpa dead link).
- * Beranda (/dashboard) dipakai semua role tapi kontennya role-aware
- * (lihat src/app/dashboard/page.tsx).
+ * Beranda (/dashboard) & beberapa rute (akademik/kehadiran/intervensi)
+ * dipakai banyak role; kontennya scope-aware (lihat tiap page).
  */
 export const NAV_ITEMS: NavItem[] = [
+  // ── Beranda (semua role, label & konten role-aware) ──
   {
     href: "/dashboard",
     label: "Ringkasan",
     labelByRole: {
-      superadmin: "Dashboard Nasional",
-      dinas: "Dashboard Wilayah",
+      superadmin: "Ikhtisar Nasional",
+      dinas: "Ringkasan Wilayah",
       kepsek: "Dashboard Sekolah",
-      guru: "Dashboard Kelas",
+      guru: "Kelas Saya",
       bk: "Dashboard BK",
     },
     icon: "home",
     roles: ["superadmin", "dinas", "kepsek", "guru", "bk"],
+    sectionByRole: { superadmin: "analitik", kepsek: "sekolah" },
   },
-  // ── Sekolah-level: data per-siswa ──
+
+  // ── Analitik superadmin/dinas (agregat) ──
+  {
+    href: "/dashboard/analisis-risiko",
+    label: "Analisis Risiko",
+    icon: "alert",
+    roles: ["superadmin"],
+    section: "analitik",
+  },
+  {
+    href: "/dashboard/perbandingan",
+    label: "Perbandingan Sekolah",
+    icon: "compare",
+    roles: ["dinas"],
+  },
+
+  // ── Risiko per kelas (kepsek) ──
+  {
+    href: "/dashboard/kelas",
+    label: "Risiko per Kelas",
+    icon: "grid",
+    roles: ["kepsek"],
+    sectionByRole: { kepsek: "sekolah" },
+  },
+
+  // ── Daftar siswa (level sekolah) ──
   {
     href: "/dashboard/siswa",
     label: "Daftar Siswa",
-    labelByRole: { guru: "Siswa Saya", bk: "Daftar Kasus" },
+    labelByRole: { guru: "Siswa Saya", bk: "Siswa Prioritas" },
     icon: "users",
     roles: ["kepsek", "guru", "bk"],
+    sectionByRole: { kepsek: "sekolah" },
   },
-  // ── Wilayah / nasional: agregat anonim ──
+
+  // ── Akademik (semua role; scope-aware) ──
   {
-    href: "/dashboard/agregat",
-    label: "Agregat Wilayah",
-    labelByRole: { superadmin: "Monitoring Nasional", dinas: "Peta Risiko" },
-    icon: "map",
-    roles: ["superadmin", "dinas"],
+    href: "/dashboard/akademik",
+    label: "Analisis Akademik",
+    labelByRole: { guru: "Akademik Kelas", kepsek: "Akademik", bk: "Akademik" },
+    icon: "book",
+    roles: ["superadmin", "dinas", "kepsek", "guru", "bk"],
+    sectionByRole: { superadmin: "analitik", kepsek: "sekolah" },
   },
-  // ── Superadmin: pengelolaan platform ──
+
+  // ── Kehadiran (semua role; scope-aware) ──
+  {
+    href: "/dashboard/kehadiran",
+    label: "Kehadiran",
+    labelByRole: {
+      superadmin: "Kehadiran Nasional",
+      dinas: "Kehadiran Wilayah",
+      guru: "Kehadiran Kelas",
+    },
+    icon: "calendar",
+    roles: ["superadmin", "dinas", "kepsek", "guru", "bk"],
+    sectionByRole: { superadmin: "analitik", kepsek: "sekolah" },
+  },
+
+  // ── Demografi (superadmin) ──
+  {
+    href: "/dashboard/demografi",
+    label: "Demografi & Pemerataan",
+    icon: "pie",
+    roles: ["superadmin"],
+    section: "analitik",
+  },
+
+  // ── Intervensi (semua role; scope-aware) ──
+  {
+    href: "/dashboard/intervensi",
+    label: "Cakupan Intervensi",
+    labelByRole: { kepsek: "Rekap Intervensi", guru: "Rekap Tindak Lanjut", bk: "Rekap Intervensi" },
+    icon: "handshake",
+    roles: ["superadmin", "dinas", "kepsek", "guru", "bk"],
+    sectionByRole: { superadmin: "analitik", kepsek: "sekolah" },
+  },
+
+  // ── Putus sekolah (superadmin) ──
+  {
+    href: "/dashboard/putus-sekolah",
+    label: "Putus Sekolah",
+    icon: "dropout",
+    roles: ["superadmin"],
+    section: "analitik",
+  },
+
+  // ── Laporan & ekspor (dinas) ──
+  {
+    href: "/dashboard/laporan",
+    label: "Laporan & Ekspor",
+    icon: "report",
+    roles: ["dinas"],
+  },
+
+  // ── Kelola consent (bk) ──
+  {
+    href: "/dashboard/consent",
+    label: "Kelola Consent",
+    icon: "consent",
+    roles: ["bk"],
+  },
+
+  // ── Kelola (kepsek) ──
+  {
+    href: "/dashboard/kelola/users",
+    label: "Kelola Guru & BK",
+    icon: "users",
+    roles: ["kepsek"],
+    sectionByRole: { kepsek: "kelola" },
+  },
+  {
+    href: "/dashboard/kelola/kelas",
+    label: "Kelola Kelas",
+    icon: "grid",
+    roles: ["kepsek"],
+    sectionByRole: { kepsek: "kelola" },
+  },
+
+  // ── Platform (superadmin) ──
   {
     href: "/dashboard/admin/tenant",
     label: "Manajemen Tenant",
     icon: "building",
     roles: ["superadmin"],
+    section: "platform",
   },
   {
     href: "/dashboard/admin/users",
     label: "Manajemen User",
     icon: "users",
     roles: ["superadmin"],
+    section: "platform",
   },
+  {
+    href: "/dashboard/admin/sync",
+    label: "Sinkronisasi & Impor",
+    icon: "sync",
+    roles: ["superadmin"],
+    section: "platform",
+  },
+
+  // ── Keamanan (superadmin) ──
   {
     href: "/dashboard/admin/audit",
     label: "Audit Log",
     icon: "audit",
     roles: ["superadmin"],
+    section: "keamanan",
   },
   {
     href: "/dashboard/admin/security",
-    label: "Security Center",
+    label: "Keamanan & Consent",
     icon: "shield",
     roles: ["superadmin"],
+    section: "keamanan",
   },
 ];
 
-/** Item nav untuk sebuah role, dengan label sudah di-resolve. */
-export function navForRole(role: Role): Array<Omit<NavItem, "labelByRole">> {
-  // Satu lintasan: saring berdasarkan role + bentuk item dgn label ter-resolve.
-  return NAV_ITEMS.reduce<Array<Omit<NavItem, "labelByRole">>>((acc, i) => {
+/** Item nav (label & section ter-resolve) untuk sebuah role, sesuai urutan. */
+export interface ResolvedNavItem {
+  href: string;
+  label: string;
+  icon: NavIcon;
+  section?: NavSection;
+}
+
+export function navForRole(role: Role): ResolvedNavItem[] {
+  return NAV_ITEMS.reduce<ResolvedNavItem[]>((acc, i) => {
     if (i.roles.includes(role)) {
       acc.push({
         href: i.href,
         label: i.labelByRole?.[role] ?? i.label,
         icon: i.icon,
-        roles: i.roles,
+        section: i.sectionByRole?.[role] ?? i.section,
       });
     }
     return acc;
@@ -105,15 +252,10 @@ export function navForRole(role: Role): Array<Omit<NavItem, "labelByRole">> {
  *
  * PENTING: ini BUKAN gerbang otorisasi. Otorisasi sebenarnya ada di
  * `requireRole()` tiap halaman/route (server-side). Beberapa rute sengaja
- * dapat diakses peran yang tak punya entri nav — mis. kepsek boleh membuka
- * `/dashboard/admin/users/baru` (lihat requireRole di halaman itu) walau tak
- * ada link nav-nya; itu diakses dari tombol kontekstual, bukan sidebar. Jadi
- * `canAccess` mengembalikan false untuk kasus tsb dan itu BENAR untuk tujuan
- * "tampilkan link sidebar?", bukan untuk "boleh akses?".
+ * diakses peran tanpa entri nav (mis. drill-down sekolah/[id] oleh superadmin,
+ * atau tombol kontekstual) — itu di-handle requireRole, bukan canAccess.
  */
 export function canAccess(role: Role, href: string): boolean {
-  // longest-prefix match agar /dashboard/siswa/[id] mewarisi /dashboard/siswa.
-  // Cari item dengan href terpanjang yang cocok — tanpa menyalin/menyortir array.
   let match: NavItem | undefined;
   for (const i of NAV_ITEMS) {
     const hit = href === i.href || href.startsWith(i.href + "/");

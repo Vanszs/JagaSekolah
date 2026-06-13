@@ -1,6 +1,12 @@
 import type { Prisma, KategoriRisiko } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { parseAlasan } from "@/lib/parseAlasan";
+import {
+  scoreBinIndex,
+  SCORE_BIN_LABELS,
+  distanceBinIndex,
+  DISTANCE_LABELS,
+} from "@/lib/analyticsBuckets";
 
 /**
  * Lapisan data analitik — SEMUA dari data nyata (Risiko snapshot historis,
@@ -470,4 +476,535 @@ export async function interventionTrend(scope: RiskScope): Promise<InterventionM
     if (b) b.jumlah += 1;
   }
   return Array.from(buckets.values());
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   TAMBAHAN — analitik kaya per-halaman (semua REAL, zero schema change).
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/** Helper: peta sekolahId → provinsi (untuk agregasi nasional per provinsi). */
+async function sekolahProvinsiMap(): Promise<Map<string, string>> {
+  const sekolah = await prisma.sekolah.findMany({
+    select: { id: true, wilayah: { select: { provinsi: true } } },
+  });
+  return new Map(sekolah.map((s) => [s.id, s.wilayah.provinsi]));
+}
+
+/* ── RISIKO: distribusi skor (histogram 10-poin) ───────────────────────── */
+export interface ScoreBin {
+  bin: string;
+  count: number;
+}
+
+export async function riskScoreDistribution(scope: RiskScope): Promise<ScoreBin[]> {
+  const rows = await prisma.risiko.findMany({
+    where: { isLatest: true, siswa: scope },
+    select: { skor: true },
+  });
+  const bins: ScoreBin[] = SCORE_BIN_LABELS.map((bin) => ({ bin, count: 0 }));
+  for (const r of rows) {
+    bins[scoreBinIndex(r.skor)]!.count += 1;
+  }
+  return bins;
+}
+
+/* ── RISIKO: sumber scoring (rule vs ml) ───────────────────────────────── */
+export async function riskSourceBreakdown(scope: RiskScope): Promise<{ sumber: string; count: number }[]> {
+  const grouped = await prisma.risiko.groupBy({
+    by: ["sumber"],
+    where: { isLatest: true, siswa: scope },
+    _count: true,
+  });
+  return grouped.map((g) => ({ sumber: g.sumber, count: g._count }));
+}
+
+/* ── RISIKO: Δ merah bulan-ke-bulan per provinsi (heatmap delta) ────────── */
+export interface ProvinceDelta {
+  provinsi: string;
+  bulanLalu: number;
+  bulanIni: number;
+  delta: number;
+}
+
+export async function riskDeltaByProvinsi(): Promise<ProvinceDelta[]> {
+  const now = new Date();
+  const curStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const prevStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const [prov, rows] = await Promise.all([
+    sekolahProvinsiMap(),
+    prisma.risiko.findMany({
+      where: { kategori: "merah", tanggalHitung: { gte: prevStart } },
+      select: { sekolahId: true, tanggalHitung: true },
+    }),
+  ]);
+  const map = new Map<string, ProvinceDelta>();
+  for (const p of new Set(prov.values())) map.set(p, { provinsi: p, bulanLalu: 0, bulanIni: 0, delta: 0 });
+  for (const r of rows) {
+    const p = prov.get(r.sekolahId);
+    if (!p) continue;
+    const e = map.get(p)!;
+    if (r.tanggalHitung >= curStart) e.bulanIni += 1;
+    else if (r.tanggalHitung >= prevStart) e.bulanLalu += 1;
+  }
+  for (const e of map.values()) e.delta = e.bulanIni - e.bulanLalu;
+  return Array.from(map.values()).sort((a, b) => b.delta - a.delta);
+}
+
+/* ── RISIKO: tren faktor dominan per bulan (multi-line) ─────────────────── */
+export interface FactorTrendPoint {
+  label: string;
+  [factor: string]: string | number;
+}
+
+export async function factorTrendMonthly(scope: RiskScope): Promise<{ points: FactorTrendPoint[]; factors: string[] }> {
+  const since = new Date();
+  since.setMonth(since.getMonth() - 5, 1); // 6 bulan terakhir (faktor lebih padat)
+  since.setHours(0, 0, 0, 0);
+  const rows = await prisma.risiko.findMany({
+    where: { tanggalHitung: { gte: since }, kategori: { in: ["merah", "kuning"] }, siswa: scope },
+    select: { tanggalHitung: true, alasanJson: true },
+  });
+  const now = new Date();
+  const buckets = new Map<string, FactorTrendPoint>();
+  for (let m = 5; m >= 0; m--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - m, 1);
+    buckets.set(monthKey(d), { label: monthLabel(d) });
+  }
+  const factorSet = new Set<string>();
+  for (const r of rows) {
+    const b = buckets.get(monthKey(r.tanggalHitung));
+    if (!b) continue;
+    try {
+      const raw = JSON.parse(r.alasanJson) as { alasan?: { kode?: string }[] };
+      const seen = new Set<string>();
+      for (const a of raw.alasan ?? []) {
+        if (!a.kode) continue;
+        const g = FACTOR_GROUP[a.kode] ?? "Lainnya";
+        if (seen.has(g)) continue;
+        seen.add(g);
+        factorSet.add(g);
+        b[g] = ((b[g] as number) ?? 0) + 1;
+      }
+    } catch {
+      /* abaikan baris rusak */
+    }
+  }
+  const factors = Array.from(factorSet);
+  for (const b of buckets.values()) for (const f of factors) if (b[f] == null) b[f] = 0;
+  return { points: Array.from(buckets.values()), factors };
+}
+
+/* ── KEHADIRAN: tren 12 bulan per status (stacked area) ─────────────────── */
+export interface AttendanceMonth {
+  label: string;
+  hadir: number;
+  izin: number;
+  sakit: number;
+  alpa: number;
+  telat: number;
+}
+
+export async function attendanceTrendMonthly(scope: RiskScope): Promise<AttendanceMonth[]> {
+  const since = new Date();
+  since.setMonth(since.getMonth() - 11, 1);
+  since.setHours(0, 0, 0, 0);
+  const rows = await prisma.absensi.findMany({
+    where: { tanggal: { gte: since }, siswa: scope },
+    select: { tanggal: true, status: true },
+  });
+  const now = new Date();
+  const buckets = new Map<string, AttendanceMonth>();
+  for (let m = 11; m >= 0; m--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - m, 1);
+    buckets.set(monthKey(d), { label: monthLabel(d), hadir: 0, izin: 0, sakit: 0, alpa: 0, telat: 0 });
+  }
+  for (const r of rows) {
+    const b = buckets.get(monthKey(r.tanggal));
+    if (b) b[r.status] += 1;
+  }
+  return Array.from(buckets.values());
+}
+
+/* ── KEHADIRAN: distribusi status 30 hari (donut, semua 5 status) ──────── */
+export async function attendanceStatusDist(scope: RiskScope): Promise<{ status: string; count: number }[]> {
+  const since = new Date();
+  since.setDate(since.getDate() - 30);
+  const grouped = await prisma.absensi.groupBy({
+    by: ["status"],
+    where: { tanggal: { gte: since }, siswa: scope },
+    _count: true,
+  });
+  return grouped.map((g) => ({ status: g.status, count: g._count }));
+}
+
+/* ── KEHADIRAN: tren alpa harian 30 hari (area) ────────────────────────── */
+export async function dailyAlpaTrend(scope: RiskScope, days = 30): Promise<{ label: string; value: number }[]> {
+  const since = new Date();
+  since.setDate(since.getDate() - (days - 1));
+  since.setHours(0, 0, 0, 0);
+  const rows = await prisma.absensi.findMany({
+    where: { status: "alpa", tanggal: { gte: since }, siswa: scope },
+    select: { tanggal: true },
+  });
+  const dayKey = (d: Date) => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+  const buckets = new Map<string, { label: string; value: number }>();
+  const now = new Date();
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
+    buckets.set(dayKey(d), { label: d.toLocaleDateString("id-ID", { day: "numeric", month: "short" }), value: 0 });
+  }
+  for (const r of rows) {
+    const b = buckets.get(dayKey(r.tanggal));
+    if (b) b.value += 1;
+  }
+  return Array.from(buckets.values());
+}
+
+/* ── KEHADIRAN: per provinsi (%hadir/%alpa/kronis) ─────────────────────── */
+export interface ProvinceAttendance {
+  provinsi: string;
+  pctHadir: number;
+  pctAlpa: number;
+  total: number;
+}
+
+export async function attendanceByProvinsi(): Promise<ProvinceAttendance[]> {
+  const since = new Date();
+  since.setDate(since.getDate() - 30);
+  const [prov, rows] = await Promise.all([
+    sekolahProvinsiMap(),
+    prisma.absensi.findMany({
+      where: { tanggal: { gte: since } },
+      select: { status: true, siswa: { select: { sekolahId: true } } },
+    }),
+  ]);
+  const agg = new Map<string, { hadir: number; alpa: number; total: number }>();
+  for (const p of new Set(prov.values())) agg.set(p, { hadir: 0, alpa: 0, total: 0 });
+  for (const r of rows) {
+    const p = prov.get(r.siswa.sekolahId);
+    if (!p) continue;
+    const e = agg.get(p)!;
+    e.total += 1;
+    if (r.status === "hadir") e.hadir += 1;
+    if (r.status === "alpa") e.alpa += 1;
+  }
+  return Array.from(agg.entries())
+    .map(([provinsi, e]) => ({
+      provinsi,
+      pctHadir: e.total > 0 ? Math.round((e.hadir / e.total) * 100) : 0,
+      pctAlpa: e.total > 0 ? Math.round((e.alpa / e.total) * 100) : 0,
+      total: e.total,
+    }))
+    .sort((a, b) => b.pctAlpa - a.pctAlpa);
+}
+
+/* ── KEHADIRAN: siswa kronis (≥5 alpa/30hr) per provinsi ───────────────── */
+export async function chronicAbsenteeByProvinsi(): Promise<{ provinsi: string; count: number }[]> {
+  const since = new Date();
+  since.setDate(since.getDate() - 30);
+  const [prov, perSiswa] = await Promise.all([
+    sekolahProvinsiMap(),
+    prisma.absensi.groupBy({
+      by: ["siswaId"],
+      where: { status: "alpa", tanggal: { gte: since } },
+      _count: true,
+    }),
+  ]);
+  const kronisIds = perSiswa.reduce<string[]>((acc, a) => {
+    if (a._count >= 5) acc.push(a.siswaId);
+    return acc;
+  }, []);
+  if (kronisIds.length === 0) return [];
+  const siswa = await prisma.siswa.findMany({ where: { id: { in: kronisIds } }, select: { sekolahId: true } });
+  const tally = new Map<string, number>();
+  for (const p of new Set(prov.values())) tally.set(p, 0);
+  for (const s of siswa) {
+    const p = prov.get(s.sekolahId);
+    if (p) tally.set(p, (tally.get(p) ?? 0) + 1);
+  }
+  return Array.from(tally.entries())
+    .map(([provinsi, count]) => ({ provinsi, count }))
+    .sort((a, b) => b.count - a.count);
+}
+
+/* ── INTERVENSI: cakupan per provinsi (diintervensi / berisiko) ────────── */
+export interface ProvinceCoverage {
+  provinsi: string;
+  berisiko: number;
+  diintervensi: number;
+  pct: number;
+}
+
+export async function interventionCoverageByProvinsi(): Promise<ProvinceCoverage[]> {
+  const [prov, atRisk, intervened] = await Promise.all([
+    sekolahProvinsiMap(),
+    prisma.risiko.findMany({
+      where: { isLatest: true, kategori: { in: ["merah", "kuning"] } },
+      select: { siswaId: true, sekolahId: true },
+    }),
+    prisma.intervensi.findMany({
+      where: { deletedAt: null },
+      select: { siswaId: true, sekolahId: true },
+    }),
+  ]);
+  const riskByProv = new Map<string, Set<string>>();
+  for (const r of atRisk) {
+    const p = prov.get(r.sekolahId);
+    if (!p) continue;
+    (riskByProv.get(p) ?? riskByProv.set(p, new Set()).get(p)!).add(r.siswaId);
+  }
+  const intByProv = new Map<string, Set<string>>();
+  for (const i of intervened) {
+    const p = prov.get(i.sekolahId);
+    if (!p) continue;
+    (intByProv.get(p) ?? intByProv.set(p, new Set()).get(p)!).add(i.siswaId);
+  }
+  const out: ProvinceCoverage[] = [];
+  for (const [provinsi, riskSet] of riskByProv) {
+    const berisiko = riskSet.size;
+    // hanya hitung siswa yang berisiko DAN diintervensi
+    const intSet = intByProv.get(provinsi) ?? new Set();
+    let diintervensi = 0;
+    for (const id of riskSet) if (intSet.has(id)) diintervensi += 1;
+    out.push({ provinsi, berisiko, diintervensi, pct: berisiko > 0 ? Math.round((diintervensi / berisiko) * 100) : 0 });
+  }
+  return out.sort((a, b) => a.pct - b.pct);
+}
+
+/* ── INTERVENSI: tren per jenis (stacked area) ─────────────────────────── */
+export async function interventionTrendByJenis(scope: RiskScope): Promise<{ points: FactorTrendPoint[]; jenis: { key: string; label: string }[] }> {
+  const since = new Date();
+  since.setMonth(since.getMonth() - 11, 1);
+  since.setHours(0, 0, 0, 0);
+  const rows = await prisma.intervensi.findMany({
+    where: { deletedAt: null, tanggal: { gte: since }, siswa: scope },
+    select: { tanggal: true, jenis: true },
+  });
+  const now = new Date();
+  const buckets = new Map<string, FactorTrendPoint>();
+  for (let m = 11; m >= 0; m--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - m, 1);
+    buckets.set(monthKey(d), { label: monthLabel(d) });
+  }
+  const jenisSet = new Set<string>();
+  for (const r of rows) {
+    const b = buckets.get(monthKey(r.tanggal));
+    if (!b) continue;
+    jenisSet.add(r.jenis);
+    b[r.jenis] = ((b[r.jenis] as number) ?? 0) + 1;
+  }
+  const jenis = Array.from(jenisSet).map((k) => ({ key: k, label: JENIS_LABEL[k] ?? k }));
+  for (const b of buckets.values()) for (const j of jenis) if (b[j.key] == null) b[j.key] = 0;
+  return { points: Array.from(buckets.values()), jenis };
+}
+
+/* ── INTERVENSI: pelaku teraktif ───────────────────────────────────────── */
+export async function topIntervenors(scope: RiskScope, take = 10): Promise<{ nama: string; count: number }[]> {
+  const grouped = await prisma.intervensi.groupBy({
+    by: ["olehUserId"],
+    where: { deletedAt: null, siswa: scope },
+    _count: true,
+    orderBy: { _count: { olehUserId: "desc" } },
+    take,
+  });
+  if (grouped.length === 0) return [];
+  const users = await prisma.user.findMany({
+    where: { id: { in: grouped.map((g) => g.olehUserId) } },
+    select: { id: true, nama: true },
+  });
+  const nameOf = new Map(users.map((u) => [u.id, u.nama]));
+  return grouped.map((g) => ({ nama: nameOf.get(g.olehUserId) ?? "—", count: g._count }));
+}
+
+/* ── AKADEMIK (model Nilai): rata-rata & %tuntas per mapel ─────────────── */
+export interface MapelStat {
+  mapel: string;
+  rataRata: number;
+  pctTuntas: number;
+  total: number;
+}
+
+/** Periode terbaru = paling akhir secara leksikografis ("2026-genap" > "2025-ganjil"). */
+async function periodeTerbaru(scope: RiskScope): Promise<string | null> {
+  const rows = await prisma.nilai.findMany({
+    where: { siswa: scope },
+    select: { periode: true },
+    distinct: ["periode"],
+    orderBy: { periode: "desc" },
+    take: 1,
+  });
+  return rows[0]?.periode ?? null;
+}
+
+export async function gradeByMapel(scope: RiskScope): Promise<MapelStat[]> {
+  const periode = await periodeTerbaru(scope);
+  if (!periode) return [];
+  const rows = await prisma.nilai.findMany({
+    where: { periode, siswa: scope },
+    select: { mapel: true, nilai: true, kkm: true },
+  });
+  const agg = new Map<string, { sum: number; tuntas: number; n: number }>();
+  for (const r of rows) {
+    const e = agg.get(r.mapel) ?? { sum: 0, tuntas: 0, n: 0 };
+    e.sum += r.nilai;
+    e.n += 1;
+    if (r.nilai >= r.kkm) e.tuntas += 1;
+    agg.set(r.mapel, e);
+  }
+  return Array.from(agg.entries())
+    .map(([mapel, e]) => ({
+      mapel,
+      rataRata: e.n > 0 ? Math.round((e.sum / e.n) * 10) / 10 : 0,
+      pctTuntas: e.n > 0 ? Math.round((e.tuntas / e.n) * 100) : 0,
+      total: e.n,
+    }))
+    .sort((a, b) => a.rataRata - b.rataRata);
+}
+
+/* ── AKADEMIK: jumlah siswa di bawah KKM per mapel (periode terbaru) ───── */
+export async function belowKkmByMapel(scope: RiskScope): Promise<{ mapel: string; count: number }[]> {
+  const stats = await gradeByMapel(scope);
+  return stats
+    .map((s) => ({ mapel: s.mapel, count: Math.round(((100 - s.pctTuntas) / 100) * s.total) }))
+    .sort((a, b) => b.count - a.count);
+}
+
+/* ── AKADEMIK: tren rata-rata nilai per periode ────────────────────────── */
+export async function gradeTrendByPeriode(scope: RiskScope): Promise<{ label: string; value: number }[]> {
+  const rows = await prisma.nilai.groupBy({
+    by: ["periode"],
+    where: { siswa: scope },
+    _avg: { nilai: true },
+    orderBy: { periode: "asc" },
+  });
+  return rows.map((r) => ({ label: r.periode, value: r._avg.nilai != null ? Math.round(r._avg.nilai * 10) / 10 : 0 }));
+}
+
+/* ── AKADEMIK: per provinsi (rata-rata nilai + %tuntas) ────────────────── */
+export async function academicByProvinsi(): Promise<{ provinsi: string; rataRata: number; pctTuntas: number }[]> {
+  const periode = await periodeTerbaru({});
+  if (!periode) return [];
+  const [prov, rows] = await Promise.all([
+    sekolahProvinsiMap(),
+    prisma.nilai.findMany({
+      where: { periode },
+      select: { nilai: true, kkm: true, siswa: { select: { sekolahId: true } } },
+    }),
+  ]);
+  const agg = new Map<string, { sum: number; tuntas: number; n: number }>();
+  for (const r of rows) {
+    const p = prov.get(r.siswa.sekolahId);
+    if (!p) continue;
+    const e = agg.get(p) ?? { sum: 0, tuntas: 0, n: 0 };
+    e.sum += r.nilai;
+    e.n += 1;
+    if (r.nilai >= r.kkm) e.tuntas += 1;
+    agg.set(p, e);
+  }
+  return Array.from(agg.entries())
+    .map(([provinsi, e]) => ({
+      provinsi,
+      rataRata: e.n > 0 ? Math.round((e.sum / e.n) * 10) / 10 : 0,
+      pctTuntas: e.n > 0 ? Math.round((e.tuntas / e.n) * 100) : 0,
+    }))
+    .sort((a, b) => a.rataRata - b.rataRata);
+}
+
+/* ── DEMOGRAFI: risiko per jenis kelamin (field non-terenkripsi) ───────── */
+export interface GroupRisk {
+  grup: string;
+  merah: number;
+  kuning: number;
+  hijau: number;
+}
+
+export async function riskByGender(scope: RiskScope): Promise<GroupRisk[]> {
+  const siswa = await prisma.siswa.findMany({
+    where: scope,
+    select: { jenisKelamin: true, risiko: { where: { isLatest: true }, select: { kategori: true }, take: 1 } },
+  });
+  const label = (g: string | null) => (g === "L" ? "Laki-laki" : g === "P" ? "Perempuan" : "Tidak diisi");
+  const map = new Map<string, GroupRisk>();
+  for (const s of siswa) {
+    const key = label(s.jenisKelamin);
+    const e = map.get(key) ?? { grup: key, merah: 0, kuning: 0, hijau: 0 };
+    const kat = s.risiko[0]?.kategori;
+    if (kat) e[kat] += 1;
+    map.set(key, e);
+  }
+  return Array.from(map.values());
+}
+
+/* ── DEMOGRAFI: risiko KIP vs non-KIP ──────────────────────────────────── */
+export async function riskByKip(scope: RiskScope): Promise<GroupRisk[]> {
+  const siswa = await prisma.siswa.findMany({
+    where: scope,
+    select: { penerimaKip: true, risiko: { where: { isLatest: true }, select: { kategori: true }, take: 1 } },
+  });
+  const map = new Map<string, GroupRisk>([
+    ["Penerima KIP", { grup: "Penerima KIP", merah: 0, kuning: 0, hijau: 0 }],
+    ["Non-KIP", { grup: "Non-KIP", merah: 0, kuning: 0, hijau: 0 }],
+  ]);
+  for (const s of siswa) {
+    const e = map.get(s.penerimaKip ? "Penerima KIP" : "Non-KIP")!;
+    const kat = s.risiko[0]?.kategori;
+    if (kat) e[kat] += 1;
+  }
+  return Array.from(map.values());
+}
+
+/* ── DEMOGRAFI: distribusi jarak ke sekolah (histogram) ────────────────── */
+export async function distanceDistribution(scope: RiskScope): Promise<ScoreBin[]> {
+  const siswa = await prisma.siswa.findMany({ where: scope, select: { jarakKm: true } });
+  const bins: ScoreBin[] = DISTANCE_LABELS.map((bin) => ({ bin, count: 0 }));
+  for (const s of siswa) {
+    if (s.jarakKm == null) continue;
+    bins[distanceBinIndex(s.jarakKm)]!.count += 1;
+  }
+  return bins;
+}
+
+/* ── PUTUS SEKOLAH: total per provinsi (sudahDropout) ──────────────────── */
+export async function dropoutByProvinsi(): Promise<{ provinsi: string; count: number }[]> {
+  const [prov, rows] = await Promise.all([
+    sekolahProvinsiMap(),
+    prisma.siswa.findMany({ where: { sudahDropout: true }, select: { sekolahId: true } }),
+  ]);
+  const tally = new Map<string, number>();
+  for (const p of new Set(prov.values())) tally.set(p, 0);
+  for (const r of rows) {
+    const p = prov.get(r.sekolahId);
+    if (p) tally.set(p, (tally.get(p) ?? 0) + 1);
+  }
+  return Array.from(tally.entries())
+    .map(([provinsi, count]) => ({ provinsi, count }))
+    .sort((a, b) => b.count - a.count);
+}
+
+/* ── PUTUS SEKOLAH: tren bulanan (nonaktifSejak) ───────────────────────── */
+export async function dropoutTrend(scope: RiskScope): Promise<{ label: string; value: number }[]> {
+  const since = new Date();
+  since.setMonth(since.getMonth() - 11, 1);
+  since.setHours(0, 0, 0, 0);
+  const rows = await prisma.siswa.findMany({
+    where: { sudahDropout: true, nonaktifSejak: { gte: since }, ...scope },
+    select: { nonaktifSejak: true },
+  });
+  const now = new Date();
+  const buckets = new Map<string, { label: string; value: number }>();
+  for (let m = 11; m >= 0; m--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - m, 1);
+    buckets.set(monthKey(d), { label: monthLabel(d), value: 0 });
+  }
+  for (const r of rows) {
+    if (!r.nonaktifSejak) continue;
+    const b = buckets.get(monthKey(r.nonaktifSejak));
+    if (b) b.value += 1;
+  }
+  return Array.from(buckets.values());
+}
+
+/* ── Total dropout (KPI) ───────────────────────────────────────────────── */
+export async function dropoutTotal(scope: RiskScope): Promise<number> {
+  return prisma.siswa.count({ where: { sudahDropout: true, ...scope } });
 }

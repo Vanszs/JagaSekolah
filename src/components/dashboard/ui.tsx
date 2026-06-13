@@ -67,6 +67,34 @@ export function PageHeader({ title, desc }: { title: string; desc?: string }) {
   );
 }
 
+/** Panel chart/section konsisten (border tipis, judul + deskripsi opsional). */
+export function Panel({
+  title,
+  desc,
+  children,
+  className = "",
+}: {
+  title: string;
+  desc?: string;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <section className={`rounded-xl border border-slate-200 bg-white p-6 ${className}`}>
+      <div className="mb-5">
+        <h2 className="font-display text-base font-semibold text-[#0F172A]">{title}</h2>
+        {desc && <p className="mt-0.5 text-sm text-slate-500">{desc}</p>}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+/** Skeleton chart (tinggi disesuaikan), hormati reduced-motion. */
+export function ChartSkeleton({ h = 240 }: { h?: number }) {
+  return <div className="w-full animate-pulse rounded-lg bg-slate-100 motion-reduce:animate-none" style={{ height: h }} />;
+}
+
 export function EmptyState({
   title,
   desc,
