@@ -45,8 +45,10 @@ describe("canAccess consistency with navForRole", () => {
     expect(canAccess("superadmin", "/dashboard/siswa/abc")).toBe(false);
   });
 
-  it("dinas denied all PII/admin routes", () => {
-    for (const href of ["/dashboard/siswa", "/dashboard/siswa/x", "/dashboard/kelas", "/dashboard/consent", "/dashboard/admin/tenant", "/dashboard/kelola/users"]) {
+  it("dinas: siswa drill-down allowed, root/kelola/consent denied", () => {
+    expect(canAccess("dinas", "/dashboard/siswa")).toBe(true);
+    expect(canAccess("dinas", "/dashboard/siswa/x")).toBe(true);
+    for (const href of ["/dashboard/consent", "/dashboard/admin/tenant", "/dashboard/admin/security", "/dashboard/kelola/users"]) {
       expect(canAccess("dinas", href)).toBe(false);
     }
   });

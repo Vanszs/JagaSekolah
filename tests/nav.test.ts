@@ -24,8 +24,8 @@ describe("navForRole — counts", () => {
   it("superadmin has 12 items", () => {
     expect(navForRole("superadmin")).toHaveLength(12);
   });
-  it("dinas has 6 items", () => {
-    expect(navForRole("dinas")).toHaveLength(6);
+  it("dinas has 10 items", () => {
+    expect(navForRole("dinas")).toHaveLength(10);
   });
   it("kepsek has 8 items", () => {
     expect(navForRole("kepsek")).toHaveLength(8);
@@ -75,15 +75,26 @@ describe("navForRole — dinas (aggregate-anonymous, NO student identity)", () =
   it("beranda label is 'Ringkasan Wilayah'", () => {
     expect(items.find((i) => i.href === "/dashboard")!.label).toBe("Ringkasan Wilayah");
   });
-  it("has comparison, akademik, kehadiran, intervensi, laporan", () => {
+  it("has analytics mirror + comparison + siswa + laporan", () => {
+    expect(hrefs).toContain("/dashboard/analisis-risiko");
     expect(hrefs).toContain("/dashboard/perbandingan");
+    expect(hrefs).toContain("/dashboard/siswa");
+    expect(hrefs).toContain("/dashboard/demografi");
+    expect(hrefs).toContain("/dashboard/putus-sekolah");
     expect(hrefs).toContain("/dashboard/akademik");
     expect(hrefs).toContain("/dashboard/kehadiran");
     expect(hrefs).toContain("/dashboard/intervensi");
     expect(hrefs).toContain("/dashboard/laporan");
   });
-  it("does NOT see Daftar Siswa (no PII)", () => {
-    expect(hrefs).not.toContain("/dashboard/siswa");
+  it("siswa label is 'Telusur Siswa' (drill ke siswa dalam wilayah)", () => {
+    expect(items.find((i) => i.href === "/dashboard/siswa")!.label).toBe("Telusur Siswa");
+  });
+  it("does NOT see root/admin (tanpa akses root)", () => {
+    expect(hrefs).not.toContain("/dashboard/admin/tenant");
+    expect(hrefs).not.toContain("/dashboard/admin/users");
+    expect(hrefs).not.toContain("/dashboard/admin/sync");
+    expect(hrefs).not.toContain("/dashboard/admin/audit");
+    expect(hrefs).not.toContain("/dashboard/admin/security");
   });
 });
 
@@ -165,12 +176,13 @@ describe("canAccess", () => {
     expect(canAccess("superadmin", "/dashboard/siswa/123")).toBe(false);
   });
 
-  it("dinas: aggregate yes, student no", () => {
+  it("dinas: analytics + siswa drill-down yes, root no", () => {
     expect(canAccess("dinas", "/dashboard/perbandingan")).toBe(true);
-    expect(canAccess("dinas", "/dashboard/akademik")).toBe(true);
-    expect(canAccess("dinas", "/dashboard/laporan")).toBe(true);
-    expect(canAccess("dinas", "/dashboard/siswa")).toBe(false);
+    expect(canAccess("dinas", "/dashboard/analisis-risiko")).toBe(true);
+    expect(canAccess("dinas", "/dashboard/siswa")).toBe(true);
+    expect(canAccess("dinas", "/dashboard/siswa/abc")).toBe(true);
     expect(canAccess("dinas", "/dashboard/admin/tenant")).toBe(false);
+    expect(canAccess("dinas", "/dashboard/admin/users")).toBe(false);
   });
 
   it("kepsek: school scope + kelola, no admin", () => {

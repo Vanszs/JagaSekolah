@@ -41,8 +41,11 @@ describe("siswaScope", () => {
     expect(siswaScope(ctx({ role: "superadmin" }))).toEqual({});
   });
 
-  it("DINAS DILARANG akses data per-siswa (403)", () => {
-    expect(() => siswaScope(ctx({ role: "dinas", wilayahId: "w1" }))).toThrow(AuthError);
+  it("dinas → wilayah-scoped {sekolah:{wilayahId}} (telusur siswa dalam wilayah)", () => {
+    expect(siswaScope(ctx({ role: "dinas", wilayahId: "w1" }))).toEqual({ sekolah: { wilayahId: "w1" } });
+  });
+  it("dinas tanpa wilayahId → 403", () => {
+    expect(() => siswaScope(ctx({ role: "dinas" }))).toThrow(AuthError);
   });
 
   it("guru tanpa kelas -> 403", () => {

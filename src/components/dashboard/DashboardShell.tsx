@@ -28,6 +28,8 @@ import {
 } from "lucide-react";
 import type { NavItem, ResolvedNavItem, NavSection } from "@/lib/nav";
 import { SECTION_LABEL } from "@/lib/nav";
+import type { Role } from "@prisma/client";
+import { TopBreadcrumb } from "@/components/dashboard/TopBreadcrumb";
 
 const ICONS: Record<NavItem["icon"], LucideIcon> = {
   home: Home,
@@ -50,7 +52,7 @@ const ICONS: Record<NavItem["icon"], LucideIcon> = {
 
 interface Props {
   nav: ResolvedNavItem[];
-  user: { nama: string; roleLabel: string; sekolah?: string | null };
+  user: { nama: string; role: Role; roleLabel: string; sekolah?: string | null };
   children: React.ReactNode;
 }
 
@@ -253,7 +255,10 @@ export default function DashboardShell({ nav, user, children }: Props) {
         </header>
 
         <main className="flex-1 overflow-y-auto px-4 py-6 sm:px-6 lg:px-10 lg:py-8">
-          <div className="mx-auto w-full max-w-7xl">{children}</div>
+          <div className="mx-auto w-full max-w-7xl">
+            <TopBreadcrumb role={user.role} />
+            {children}
+          </div>
         </main>
       </div>
     </div>

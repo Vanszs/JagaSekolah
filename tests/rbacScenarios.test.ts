@@ -32,7 +32,8 @@ const bk = ctx({ role: "bk", sekolahId: SEK_MENTAWAI });
 
 describe("siswaScope per role", () => {
   it("superadmin → {} (national)", () => expect(siswaScope(superadmin)).toEqual({}));
-  it("dinas → THROWS 403 (aggregate-only, never per-student)", () => expect(() => siswaScope(dinas)).toThrow(AuthError));
+  it("dinas → {sekolah:{wilayahId}} (wilayah-scoped, dapat telusur hingga siswa)", () => expect(siswaScope(dinas)).toEqual({ sekolah: { wilayahId: WIL_NTT } }));
+  it("dinas tanpa wilayahId → 403", () => expect(() => siswaScope(ctx({ role: "dinas" }))).toThrow(AuthError));
   it("kepsek → {sekolahId}", () => expect(siswaScope(kepsek)).toEqual({ sekolahId: SEK_MENTAWAI }));
   it("bk → {sekolahId}", () => expect(siswaScope(bk)).toEqual({ sekolahId: SEK_MENTAWAI }));
   it("guru → {sekolahId, kelasId}", () => expect(siswaScope(guru)).toEqual({ sekolahId: SEK_MENTAWAI, kelasId: KELAS_8A }));
@@ -103,12 +104,15 @@ describe("requireRole", () => {
   it("guru in [superadmin] throws", () => expect(() => requireRole(guru, "superadmin")).toThrow(AuthError));
 });
 
-describe("authorizeResolvedSiswa (IDOR + anti-enumeration)", () => {
-  const sOwnKelas = { id: "s1", sekolahId: SEK_MENTAWAI, kelasId: KELAS_8A };
-  const sOtherKelas = { id: "s2", sekolahId: SEK_MENTAWAI, kelasId: KELAS_8B };
-  const sOtherSchool = { id: "s3", sekolahId: SEK_PADANG, kelasId: KELAS_8A };
+describe("authorizeResolvedSiswa (IDOR + anti-enumeration + dinas wilayah)", () => {
+  const sOwnKelas = { id: "s1", sekolahId: SEK_MENTAWAI, kelasId: KELAS_8A, wilayahId: WIL_NTT };
+  const sOtherKelas = { id: "s2", sekolahId: SEK_MENTAWAI, kelasId: KELAS_8B, wilayahId: WIL_NTT };
+  const sOtherSchool = { id: "s3", sekolahId: SEK_PADANG, kelasId: KELAS_8A, wilayahId: "wil-sumbar" };
 
   it("superadmin resolves any school", () => expect(authorizeResolvedSiswa(superadmin, sOtherSchool)).toEqual(sOtherSchool));
+  it("dinas resolves siswa in own wilayah", () => expect(authorizeResolvedSiswa(dinas, sOwnKelas)).toEqual(sOwnKelas));
+  it("dinas cross-wilayah → 403", () => expect(() => authorizeResolvedSiswa(dinas, sOtherSchool)).toThrow(AuthError));
+  it("dinas without wilayahId → 403", () => expect(() => authorizeResolvedSiswa(ctx({ role: "dinas" }), sOwnKelas)).toThrow(AuthError));
   it("kepsek resolves own-school any-kelas", () => expect(authorizeResolvedSiswa(kepsek, sOtherKelas)).toEqual(sOtherKelas));
   it("kepsek cross-school → 403", () => expect(() => authorizeResolvedSiswa(kepsek, sOtherSchool)).toThrow(AuthError));
   it("guru own-kelas OK", () => expect(authorizeResolvedSiswa(guru, sOwnKelas)).toEqual(sOwnKelas));

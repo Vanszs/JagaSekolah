@@ -21,6 +21,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       nav={navForRole(role)}
       user={{
         nama: user?.nama ?? "Pengguna",
+        role,
         roleLabel: roleLabel(role),
         sekolah: user?.sekolah?.nama ?? null,
       }}

@@ -27,8 +27,8 @@ export function requireRole(ctx: TenantContext, ...roles: Role[]): void {
 
 /**
  * Filter Prisma `where` untuk data berbasis Siswa, DIPAKSA per tenant.
- * - superadmin: tanpa filter (pengelola sistem).
- * - dinas: TIDAK boleh akses data per-siswa (lempar 403) - hanya agregat.
+ * - superadmin: tanpa filter (akses penuh hingga siswa).
+ * - dinas: dibatasi ke wilayahnya (boleh menelusuri hingga siswa DI WILAYAHNYA).
  * - kepsek/bk: dibatasi ke sekolahId-nya.
  * - guru: dibatasi ke kelasId-nya (di dalam sekolahnya).
  */
@@ -37,7 +37,8 @@ export function siswaScope(ctx: TenantContext): Record<string, unknown> {
     case "superadmin":
       return {};
     case "dinas":
-      throw new AuthError(403, "Dinas hanya boleh mengakses data agregat anonim.");
+      if (!ctx.wilayahId) throw new AuthError(403, "Wilayah tidak diketahui.");
+      return { sekolah: { wilayahId: ctx.wilayahId } };
     case "kepsek":
     case "bk":
       if (!ctx.sekolahId) throw new AuthError(403, "Sekolah tidak diketahui.");
@@ -70,6 +71,19 @@ export function assertSameSekolah(ctx: TenantContext, sekolahId: string): void {
   if (ctx.sekolahId !== sekolahId) {
     throw new AuthError(403, "Akses lintas sekolah ditolak.");
   }
+}
+
+/**
+ * Validasi bahwa wilayahId target sama dgn tenant dinas (cegah dinas mengakses
+ * lintas wilayah). superadmin lolos. Dipakai pada drill-down sekolah/kelas/siswa.
+ */
+export function assertSameWilayah(ctx: TenantContext, wilayahId: string): void {
+  if (ctx.role === "superadmin") return;
+  if (ctx.role === "dinas") {
+    if (ctx.wilayahId !== wilayahId) throw new AuthError(403, "Akses lintas wilayah ditolak.");
+    return;
+  }
+  throw new AuthError(403, "Akses ditolak.");
 }
 
 /**

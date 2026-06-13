@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { requireDashboardContext } from "@/lib/session";
-import { requireRole } from "@/lib/rbac";
+import { requireRole, assertSameWilayah } from "@/lib/rbac";
 import { audit } from "@/lib/audit";
 import { riskBySekolah } from "@/lib/analytics";
 import { PageHeader } from "@/components/dashboard/ui";
@@ -15,6 +15,7 @@ export default async function KabupatenPage({ params }: { params: Promise<{ wila
   const { wilayahId } = await params;
   const ctx = await requireDashboardContext(`/dashboard/kabupaten/${wilayahId}`);
   requireRole(ctx, "superadmin", "dinas");
+  assertSameWilayah(ctx, wilayahId); // dinas hanya wilayahnya
 
   const wilayah = await prisma.wilayah.findUnique({
     where: { id: wilayahId },

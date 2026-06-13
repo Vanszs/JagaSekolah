@@ -66,13 +66,13 @@ export const NAV_ITEMS: NavItem[] = [
     sectionByRole: { superadmin: "analitik", kepsek: "sekolah" },
   },
 
-  // ── Analitik superadmin/dinas (agregat) ──
+  // ── Analitik superadmin/dinas (agregat + drill-down) ──
   {
     href: "/dashboard/analisis-risiko",
     label: "Analisis Risiko",
     icon: "alert",
-    roles: ["superadmin"],
-    section: "analitik",
+    roles: ["superadmin", "dinas"],
+    sectionByRole: { superadmin: "analitik" },
   },
   {
     href: "/dashboard/perbandingan",
@@ -94,9 +94,9 @@ export const NAV_ITEMS: NavItem[] = [
   {
     href: "/dashboard/siswa",
     label: "Daftar Siswa",
-    labelByRole: { guru: "Siswa Saya", bk: "Siswa Prioritas" },
+    labelByRole: { guru: "Siswa Saya", bk: "Siswa Prioritas", dinas: "Telusur Siswa" },
     icon: "users",
-    roles: ["kepsek", "guru", "bk"],
+    roles: ["dinas", "kepsek", "guru", "bk"],
     sectionByRole: { kepsek: "sekolah" },
   },
 
@@ -124,13 +124,13 @@ export const NAV_ITEMS: NavItem[] = [
     sectionByRole: { superadmin: "analitik", kepsek: "sekolah" },
   },
 
-  // ── Demografi (superadmin) ──
+  // ── Demografi (superadmin + dinas) ──
   {
     href: "/dashboard/demografi",
     label: "Demografi & Pemerataan",
     icon: "pie",
-    roles: ["superadmin"],
-    section: "analitik",
+    roles: ["superadmin", "dinas"],
+    sectionByRole: { superadmin: "analitik" },
   },
 
   // ── Intervensi (semua role; scope-aware) ──
@@ -148,8 +148,8 @@ export const NAV_ITEMS: NavItem[] = [
     href: "/dashboard/putus-sekolah",
     label: "Putus Sekolah",
     icon: "dropout",
-    roles: ["superadmin"],
-    section: "analitik",
+    roles: ["superadmin", "dinas"],
+    sectionByRole: { superadmin: "analitik" },
   },
 
   // ── Laporan & ekspor (dinas) ──

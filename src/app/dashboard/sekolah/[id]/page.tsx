@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { prisma } from "@/lib/db";
 import { requireDashboardContext } from "@/lib/session";
-import { requireRole } from "@/lib/rbac";
+import { requireRole, assertSameWilayah } from "@/lib/rbac";
 import { audit } from "@/lib/audit";
 import { riskByKelasInSekolah, monthlyRiskTrend } from "@/lib/analytics";
 import { PageHeader } from "@/components/dashboard/ui";
@@ -23,6 +23,7 @@ export default async function SekolahPage({ params }: { params: Promise<{ id: st
     select: { nama: true, npsn: true, wilayahId: true, wilayah: { select: { provinsi: true, kabupaten: true } } },
   });
   if (!sekolah) notFound();
+  assertSameWilayah(ctx, sekolah.wilayahId); // dinas hanya wilayahnya; superadmin lolos
 
   await audit(ctx, "view_agregat", `sekolah:${id}`);
 
