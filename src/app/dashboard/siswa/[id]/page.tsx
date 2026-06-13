@@ -1,0 +1,258 @@
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { ArrowLeft, CalendarX, GraduationCap, HeartHandshake, Lightbulb, TriangleAlert } from "lucide-react";
+import type { AbsensiStatus } from "@prisma/client";
+import { prisma } from "@/lib/db";
+import { requireContext } from "@/lib/session";
+import { resolveSiswa } from "@/lib/resolveSiswa";
+import { AuthError } from "@/lib/rbac";
+import { RiskBadge, EmptyState } from "@/components/dashboard/ui";
+
+export const dynamic = "force-dynamic";
+
+function parseAlasan(json: string): { alasan: string[]; saran: string[] } {
+  try {
+    const p = JSON.parse(json) as { alasan?: unknown; saran?: unknown };
+    const arr = (v: unknown) => (Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : []);
+    return { alasan: arr(p.alasan), saran: arr(p.saran) };
+  } catch {
+    return { alasan: [], saran: [] };
+  }
+}
+
+export default async function SiswaDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const ctx = await requireContext();
+  const { id } = await params;
+
+  // IDOR-safe: lempar 403 (uniform) bila bukan milik tenant.
+  try {
+    await resolveSiswa(ctx, id);
+  } catch (e) {
+    if (e instanceof AuthError) notFound();
+    throw e;
+  }
+
+  const siswa = await prisma.siswa.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      nama: true,
+      nisn: true,
+      jenisKelamin: true,
+      penerimaKip: true,
+      kelas: { select: { nama: true } },
+      risiko: {
+        where: { isLatest: true },
+        select: { kategori: true, skor: true, alasanJson: true, tanggalHitung: true, configVersion: true },
+        take: 1,
+      },
+      nilai: { orderBy: { periode: "desc" }, take: 6, select: { mapel: true, periode: true, nilai: true, kkm: true } },
+      intervensi: {
+        where: { deletedAt: null },
+        orderBy: { tanggal: "desc" },
+        take: 5,
+        select: { id: true, tanggal: true, jenis: true, catatan: true, oleh: { select: { nama: true } } },
+      },
+    },
+  });
+  if (!siswa) notFound();
+
+  // Ringkasan absensi 30 hari terakhir
+  const since = new Date();
+  since.setDate(since.getDate() - 30);
+  const absensi = await prisma.absensi.groupBy({
+    by: ["status"],
+    where: { siswaId: id, tanggal: { gte: since } },
+    _count: true,
+  });
+  const absCount = (s: AbsensiStatus) => absensi.find((a) => a.status === s)?._count ?? 0;
+  const totalAbs = absensi.reduce((acc, a) => acc + a._count, 0);
+  const alpa = absCount("alpa");
+  const pctAlpa = totalAbs > 0 ? Math.round((alpa / totalAbs) * 100) : 0;
+
+  const risiko = siswa.risiko[0] ?? null;
+  const { alasan, saran } = risiko ? parseAlasan(risiko.alasanJson) : { alasan: [], saran: [] };
+
+  return (
+    <>
+      <Link
+        href="/dashboard/siswa"
+        className="mb-5 inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 transition-colors hover:text-slate-700"
+      >
+        <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+        Daftar Siswa
+      </Link>
+
+      {/* Header siswa */}
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="font-display text-2xl font-bold tracking-tight text-[#0F172A]">{siswa.nama}</h1>
+          <p className="mt-1 text-sm text-slate-500">
+            {siswa.kelas.nama} · NISN <span className="tabular-nums">{siswa.nisn}</span>
+            {siswa.penerimaKip && (
+              <span className="ml-2 rounded-md bg-blue-50 px-1.5 py-0.5 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-600/20">
+                Penerima KIP
+              </span>
+            )}
+          </p>
+        </div>
+        {risiko && (
+          <div className="text-right">
+            <RiskBadge kategori={risiko.kategori} />
+            <p className="mt-1 text-2xl font-bold tabular-nums text-slate-900">{Math.round(risiko.skor)}<span className="text-sm font-normal text-slate-400">/100</span></p>
+          </div>
+        )}
+      </div>
+
+      {!risiko ? (
+        <div className="mt-6">
+          <EmptyState
+            icon={<TriangleAlert className="h-6 w-6" aria-hidden="true" />}
+            title="Skor risiko belum dihitung"
+            desc="Data risiko siswa ini belum tersedia. Jalankan perhitungan skor terlebih dulu."
+          />
+        </div>
+      ) : (
+        <div className="mt-6 grid gap-5 lg:grid-cols-2">
+          {/* Alasan — transparansi */}
+          <section className="rounded-xl border border-slate-200 bg-white p-5">
+            <h2 className="flex items-center gap-2 font-display text-base font-semibold text-[#0F172A]">
+              <TriangleAlert className="h-4 w-4 text-[#005D4C]" aria-hidden="true" />
+              Mengapa ditandai begini
+            </h2>
+            {alasan.length > 0 ? (
+              <ul className="mt-3 space-y-2">
+                {alasan.map((a, i) => (
+                  <li key={i} className="flex gap-2.5 text-sm text-slate-700">
+                    <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-slate-400" aria-hidden="true" />
+                    {a}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="mt-3 text-sm text-slate-500">Tidak ada alasan spesifik tercatat.</p>
+            )}
+          </section>
+
+          {/* Saran tindakan */}
+          <section className="rounded-xl border border-[#005D4C]/20 bg-[#005D4C]/[0.03] p-5">
+            <h2 className="flex items-center gap-2 font-display text-base font-semibold text-[#0F172A]">
+              <Lightbulb className="h-4 w-4 text-[#005D4C]" aria-hidden="true" />
+              Saran tindakan
+            </h2>
+            {saran.length > 0 ? (
+              <ul className="mt-3 space-y-2">
+                {saran.map((s, i) => (
+                  <li key={i} className="flex gap-2.5 text-sm text-slate-700">
+                    <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#005D4C]" aria-hidden="true" />
+                    {s}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="mt-3 text-sm text-slate-500">Belum ada saran tindakan.</p>
+            )}
+          </section>
+        </div>
+      )}
+
+      {/* Konteks data */}
+      <div className="mt-5 grid gap-5 lg:grid-cols-2">
+        {/* Absensi 30 hari */}
+        <section className="rounded-xl border border-slate-200 bg-white p-5">
+          <h2 className="flex items-center gap-2 font-display text-base font-semibold text-[#0F172A]">
+            <CalendarX className="h-4 w-4 text-slate-400" aria-hidden="true" />
+            Kehadiran 30 hari
+          </h2>
+          {totalAbs === 0 ? (
+            <p className="mt-3 text-sm text-slate-500">Belum ada catatan kehadiran.</p>
+          ) : (
+            <>
+              <p className="mt-3 text-sm text-slate-600">
+                <span className="font-semibold tabular-nums text-slate-900">{pctAlpa}%</span> alpa
+                <span className="text-slate-400"> ({alpa} dari {totalAbs} hari tercatat)</span>
+              </p>
+              <dl className="mt-4 grid grid-cols-3 gap-3 text-center">
+                {(["hadir", "izin", "sakit"] as AbsensiStatus[]).map((s) => (
+                  <div key={s} className="rounded-lg bg-slate-50 py-2">
+                    <dt className="text-xs capitalize text-slate-500">{s}</dt>
+                    <dd className="text-base font-semibold tabular-nums text-slate-900">{absCount(s)}</dd>
+                  </div>
+                ))}
+                {(["alpa", "telat"] as AbsensiStatus[]).map((s) => (
+                  <div key={s} className="rounded-lg bg-red-50 py-2">
+                    <dt className="text-xs capitalize text-red-600">{s}</dt>
+                    <dd className="text-base font-semibold tabular-nums text-red-700">{absCount(s)}</dd>
+                  </div>
+                ))}
+              </dl>
+            </>
+          )}
+        </section>
+
+        {/* Nilai terbaru */}
+        <section className="rounded-xl border border-slate-200 bg-white p-5">
+          <h2 className="flex items-center gap-2 font-display text-base font-semibold text-[#0F172A]">
+            <GraduationCap className="h-4 w-4 text-slate-400" aria-hidden="true" />
+            Nilai terbaru
+          </h2>
+          {siswa.nilai.length === 0 ? (
+            <p className="mt-3 text-sm text-slate-500">Belum ada nilai tercatat.</p>
+          ) : (
+            <ul className="mt-3 divide-y divide-slate-100">
+              {siswa.nilai.map((n, i) => {
+                const below = n.nilai < n.kkm;
+                return (
+                  <li key={i} className="flex items-center justify-between py-2 text-sm">
+                    <span className="text-slate-700">
+                      {n.mapel} <span className="text-xs text-slate-400">· {n.periode}</span>
+                    </span>
+                    <span className={`font-semibold tabular-nums ${below ? "text-red-600" : "text-slate-900"}`}>
+                      {n.nilai}
+                      {below && <span className="ml-1 text-xs font-normal text-red-400">&lt; KKM {n.kkm}</span>}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </section>
+      </div>
+
+      {/* Riwayat intervensi */}
+      <section className="mt-5 rounded-xl border border-slate-200 bg-white p-5">
+        <h2 className="flex items-center gap-2 font-display text-base font-semibold text-[#0F172A]">
+          <HeartHandshake className="h-4 w-4 text-slate-400" aria-hidden="true" />
+          Riwayat intervensi
+        </h2>
+        {siswa.intervensi.length === 0 ? (
+          <p className="mt-3 text-sm text-slate-500">Belum ada tindak lanjut tercatat.</p>
+        ) : (
+          <ol className="mt-4 space-y-4 border-l border-slate-200 pl-4">
+            {siswa.intervensi.map((it) => (
+              <li key={it.id} className="relative">
+                <span className="absolute -left-[1.30rem] top-1 h-2 w-2 rounded-full bg-[#005D4C] ring-4 ring-white" aria-hidden="true" />
+                <p className="text-xs text-slate-400">
+                  <time dateTime={it.tanggal.toISOString()}>
+                    {it.tanggal.toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
+                  </time>
+                  {" · "}{it.oleh.nama}
+                </p>
+                <p className="mt-0.5 text-sm font-medium capitalize text-slate-900">{it.jenis.replace(/_/g, " ")}</p>
+                {it.catatan && <p className="mt-0.5 text-sm text-slate-600">{it.catatan}</p>}
+              </li>
+            ))}
+          </ol>
+        )}
+      </section>
+
+      {risiko && (
+        <p className="mt-5 text-xs text-slate-400">
+          Skor dihitung otomatis (rule-based, transparan) · versi konfigurasi{" "}
+          <span className="font-mono">{risiko.configVersion.slice(0, 8)}</span> ·{" "}
+          {risiko.tanggalHitung.toLocaleDateString("id-ID")}
+        </p>
+      )}
+    </>
+  );
+}

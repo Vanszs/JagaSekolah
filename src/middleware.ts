@@ -5,11 +5,13 @@ import { NextResponse } from "next/server";
 export default auth((req) => {
   const { pathname } = req.nextUrl;
 
-  // Route publik (landing, login, demo dashboard, auth & health API)
+  // Route publik (landing, login, auth & health API).
+  // Catatan: halaman /dashboard/* di-gate oleh layout (Node runtime, auth()+redirect)
+  // karena session callback memakai Prisma yang tidak andal di Edge middleware.
   const isPublic =
     pathname === "/" ||
     pathname === "/login" ||
-    pathname === "/dashboard" ||
+    pathname.startsWith("/dashboard") ||
     pathname.startsWith("/api/auth") ||
     pathname === "/api/health";
 
