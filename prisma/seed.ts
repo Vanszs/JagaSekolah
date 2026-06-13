@@ -227,6 +227,44 @@ async function main() {
   }
   await prisma.risiko.createMany({ data: risikoRows });
 
+  // ── Snapshot risiko HISTORIS (11 bulan ke belakang) ──────────────────
+  // Membuat tren 12 bulan & delta bulan-ke-bulan menjadi DATA NYATA (bukan
+  // dikarang saat baca). Deterministik: tiap siswa "membaik" dari masa lalu
+  // ke sekarang (lebih banyak merah di masa lalu) untuk mengilustrasikan
+  // dampak intervensi. Snapshot lama isLatest=false.
+  const KATEGORI_ORDER: ("hijau" | "kuning" | "merah")[] = ["hijau", "kuning", "merah"];
+  const KATEGORI_IDX: Record<string, number> = { hijau: 0, kuning: 1, merah: 2 };
+  const histRows: Prisma.RisikoCreateManyInput[] = [];
+  const now = new Date();
+  for (let m = 11; m >= 1; m--) {
+    const tanggal = new Date(now.getFullYear(), now.getMonth() - m, 15);
+    for (let i = 0; i < risikoRows.length; i++) {
+      const cur = risikoRows[i]!;
+      const curIdx = KATEGORI_IDX[cur.kategori as string] ?? 0;
+      // Makin jauh ke belakang, makin besar peluang kategori lebih tinggi (memburuk).
+      // Deterministik via (i + m) — tanpa Math.random.
+      const bump = ((i * 7 + m * 13) % 12 < m) ? 1 : 0; // makin lama makin sering +1
+      const histIdx = Math.min(2, curIdx + bump);
+      const kategori = KATEGORI_ORDER[histIdx]!;
+      const skor = kategori === "merah" ? 70 : kategori === "kuning" ? 45 : 15;
+      histRows.push({
+        siswaId: cur.siswaId,
+        sekolahId: cur.sekolahId,
+        tanggalHitung: tanggal,
+        kategori,
+        skor,
+        alasanJson: cur.alasanJson,
+        sumber: "rule",
+        configVersion: cur.configVersion,
+        isLatest: false,
+      });
+    }
+  }
+  // chunk insert (hindari payload besar)
+  for (let i = 0; i < histRows.length; i += 500) {
+    await prisma.risiko.createMany({ data: histRows.slice(i, i + 500) });
+  }
+
   // Intervensi pada beberapa siswa MERAH sekolah A (oleh guru/bk sekolah A)
   const merahA = siswaMerah.filter((s) => s.sekolahId === sekolahA.id).slice(0, 6);
   const jenis = ["kunjungan_rumah", "koordinasi_bk", "usul_kip", "konseling"];

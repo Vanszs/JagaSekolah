@@ -15,13 +15,20 @@ const FILTERS: { key: "" | KategoriRisiko; label: string }[] = [
   { key: "hijau", label: "Aman" },
 ];
 
+// Bobot urutan kategori (merah>kuning>hijau) — statik, modul-scope.
+const RANK: Record<string, number> = { merah: 3, kuning: 2, hijau: 1 };
+
 export default async function SiswaListPage({
   searchParams,
 }: {
   searchParams: Promise<{ q?: string; kategori?: string }>;
 }) {
-  const ctx = await requireDashboardContext("/dashboard/siswa");
-  const { q = "", kategori = "" } = await searchParams;
+  // ctx & searchParams independen -> jalankan paralel.
+  const [ctx, sp] = await Promise.all([
+    requireDashboardContext("/dashboard/siswa"),
+    searchParams,
+  ]);
+  const { q = "", kategori = "" } = sp;
 
   // Dinas tidak boleh data per-siswa — tampilkan notice ramah (bukan crash).
   let where: Record<string, unknown>;
@@ -75,7 +82,6 @@ export default async function SiswaListPage({
   });
 
   // urutkan: berisiko tinggi dulu (merah>kuning>hijau>none), lalu skor desc
-  const RANK: Record<string, number> = { merah: 3, kuning: 2, hijau: 1 };
   const rows = siswa
     .map((s) => ({ ...s, r: s.risiko[0] ?? null }))
     .sort((a, b) => {

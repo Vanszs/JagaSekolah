@@ -1,14 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import {
   Home,
   Users,
-  BarChart3,
   ShieldCheck,
   School,
+  Building2,
+  Map,
+  ScrollText,
   Menu,
   X,
   LogOut,
@@ -19,9 +21,10 @@ import type { NavItem } from "@/lib/nav";
 const ICONS: Record<NavItem["icon"], LucideIcon> = {
   home: Home,
   users: Users,
-  chart: BarChart3,
   shield: ShieldCheck,
-  school: School,
+  building: Building2,
+  map: Map,
+  audit: ScrollText,
 };
 
 interface Props {
@@ -30,34 +33,17 @@ interface Props {
   children: React.ReactNode;
 }
 
-export default function DashboardShell({ nav, user, children }: Props) {
-  const pathname = usePathname();
-  const router = useRouter();
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const [loggingOut, setLoggingOut] = useState(false);
-
-  const initials = user.nama
-    .split(" ")
-    .slice(0, 2)
-    .map((w) => w[0])
-    .join("")
-    .toUpperCase();
-
-  function isActive(href: string) {
-    return href === "/dashboard" ? pathname === href : pathname.startsWith(href);
-  }
-
-  async function logout() {
-    setLoggingOut(true);
-    try {
-      await fetch("/api/auth/logout", { method: "POST" });
-    } finally {
-      router.push("/login");
-      router.refresh();
-    }
-  }
-
-  const NavList = ({ onNavigate }: { onNavigate?: () => void }) => (
+/** Daftar tautan navigasi — komponen modul-scope (tidak di-remount tiap render). */
+function NavList({
+  nav,
+  isActive,
+  onNavigate,
+}: {
+  nav: NavItem[];
+  isActive: (href: string) => boolean;
+  onNavigate?: () => void;
+}) {
+  return (
     <nav aria-label="Menu utama" className="flex flex-1 flex-col gap-1 px-3 py-4">
       {nav.map((item) => {
         const Icon = ICONS[item.icon];
@@ -81,14 +67,33 @@ export default function DashboardShell({ nav, user, children }: Props) {
       })}
     </nav>
   );
+}
 
-  const SidebarInner = ({ onNavigate }: { onNavigate?: () => void }) => (
+/** Isi sidebar (logo + nav + profil + logout) — komponen modul-scope. */
+function SidebarInner({
+  nav,
+  user,
+  initials,
+  isActive,
+  loggingOut,
+  onLogout,
+  onNavigate,
+}: {
+  nav: NavItem[];
+  user: Props["user"];
+  initials: string;
+  isActive: (href: string) => boolean;
+  loggingOut: boolean;
+  onLogout: () => void;
+  onNavigate?: () => void;
+}) {
+  return (
     <>
       <div className="flex h-16 items-center gap-0.5 border-b border-slate-100 px-5">
         <span className="font-display text-lg font-bold text-[#0F172A]">Jaga</span>
         <span className="font-display text-lg font-bold text-[#005D4C]">Sekolah</span>
       </div>
-      <NavList onNavigate={onNavigate} />
+      <NavList nav={nav} isActive={isActive} onNavigate={onNavigate} />
       <div className="border-t border-slate-100 p-3">
         <div className="flex items-center gap-3 rounded-lg px-2 py-2">
           <span
@@ -104,9 +109,9 @@ export default function DashboardShell({ nav, user, children }: Props) {
         </div>
         <button
           type="button"
-          onClick={logout}
+          onClick={onLogout}
           disabled={loggingOut}
-          className="mt-1 flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-red-50 hover:text-red-700 focus-visible:ring-2 focus-visible:ring-red-400 disabled:opacity-60"
+          className="mt-1 flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50 hover:text-red-700 focus-visible:ring-2 focus-visible:ring-red-400 disabled:opacity-60"
         >
           <LogOut className="h-[18px] w-[18px] text-slate-400" aria-hidden="true" />
           {loggingOut ? "Keluar…" : "Keluar"}
@@ -114,62 +119,101 @@ export default function DashboardShell({ nav, user, children }: Props) {
       </div>
     </>
   );
+}
+
+export default function DashboardShell({ nav, user, children }: Props) {
+  const pathname = usePathname();
+  const router = useRouter();
+  const [loggingOut, setLoggingOut] = useState(false);
+  const drawerRef = useRef<HTMLDialogElement>(null);
+
+  const openDrawer = () => drawerRef.current?.showModal();
+  const closeDrawer = () => drawerRef.current?.close();
+
+  const initials = user.nama
+    .split(" ")
+    .slice(0, 2)
+    .map((w) => w[0])
+    .join("")
+    .toUpperCase();
+
+  function isActive(href: string) {
+    return href === "/dashboard" ? pathname === href : pathname.startsWith(href);
+  }
+
+  async function logout() {
+    setLoggingOut(true);
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+    } finally {
+      router.push("/login");
+      router.refresh();
+    }
+  }
 
   return (
     <div className="flex h-dvh bg-[#F8FAFC]">
       {/* Sidebar — desktop */}
       <aside className="hidden w-64 shrink-0 flex-col border-r border-slate-200 bg-white lg:flex">
-        <SidebarInner />
+        <SidebarInner
+          nav={nav}
+          user={user}
+          initials={initials}
+          isActive={isActive}
+          loggingOut={loggingOut}
+          onLogout={logout}
+        />
       </aside>
 
-      {/* Drawer — mobile */}
-      {drawerOpen && (
-        <div className="fixed inset-0 z-50 lg:hidden">
-          <div
-            className="absolute inset-0 bg-slate-900/40"
-            aria-hidden="true"
-            onClick={() => setDrawerOpen(false)}
-          />
-          <aside
-            className="absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col bg-white shadow-xl"
-            role="dialog"
-            aria-modal="true"
-            aria-label="Menu navigasi"
+      {/* Drawer — mobile (native <dialog>: focus-trap + Escape + backdrop gratis) */}
+      <dialog
+        ref={drawerRef}
+        aria-label="Menu navigasi"
+        className="m-0 h-dvh max-h-none w-72 max-w-[85vw] bg-white p-0 shadow-xl backdrop:bg-slate-900/40 lg:hidden"
+      >
+        <div className="flex h-full flex-col">
+          <button
+            type="button"
+            onClick={closeDrawer}
+            aria-label="Tutup menu"
+            className="absolute right-3 top-4 rounded-md p-2 text-slate-400 hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-[#005D4C]"
           >
-            <button
-              type="button"
-              onClick={() => setDrawerOpen(false)}
-              aria-label="Tutup menu"
-              className="absolute right-3 top-4 rounded-md p-2 text-slate-400 hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-[#005D4C]"
-            >
-              <X className="h-5 w-5" aria-hidden="true" />
-            </button>
-            <SidebarInner onNavigate={() => setDrawerOpen(false)} />
-          </aside>
+            <X className="h-5 w-5" aria-hidden="true" />
+          </button>
+          <SidebarInner
+            nav={nav}
+            user={user}
+            initials={initials}
+            isActive={isActive}
+            loggingOut={loggingOut}
+            onLogout={logout}
+            onNavigate={() => drawerRef.current?.close()}
+          />
         </div>
-      )}
+      </dialog>
 
       {/* Main column */}
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        <header className="flex h-16 shrink-0 items-center gap-3 border-b border-slate-200 bg-white px-4 lg:px-8">
+        <header className="flex h-16 shrink-0 items-center gap-3 border-b border-slate-200 bg-white px-4 lg:px-10">
           <button
             type="button"
-            onClick={() => setDrawerOpen(true)}
+            onClick={openDrawer}
             aria-label="Buka menu"
             className="-ml-2 rounded-md p-2 text-slate-500 hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-[#005D4C] lg:hidden"
           >
             <Menu className="h-5 w-5" aria-hidden="true" />
           </button>
-          <div className="flex items-center gap-2 text-xs text-slate-500">
-            <ShieldCheck className="h-4 w-4 text-[#005D4C]" aria-hidden="true" />
-            <span className="font-mono uppercase tracking-wide">{user.roleLabel}</span>
-            {user.sekolah && (
-              <>
-                <span className="text-slate-300" aria-hidden="true">·</span>
-                <span className="truncate">{user.sekolah}</span>
-              </>
-            )}
-          </div>
+
+          {/* Konteks tenant (sekolah) bila ada — peran sudah tampil di profil sidebar */}
+          {user.sekolah ? (
+            <div className="flex min-w-0 items-center gap-2 text-sm text-slate-500">
+              <School className="h-4 w-4 shrink-0 text-slate-400" aria-hidden="true" />
+              <span className="truncate font-medium text-slate-700">{user.sekolah}</span>
+            </div>
+          ) : (
+            <span className="text-sm font-medium text-slate-400">JagaSekolah</span>
+          )}
+
           <span
             className="ml-auto flex h-8 w-8 items-center justify-center rounded-full bg-[#005D4C]/10 font-display text-xs font-bold text-[#005D4C] lg:hidden"
             aria-hidden="true"
@@ -178,8 +222,8 @@ export default function DashboardShell({ nav, user, children }: Props) {
           </span>
         </header>
 
-        <main className="flex-1 overflow-y-auto px-4 py-6 lg:px-8 lg:py-8">
-          <div className="mx-auto max-w-5xl">{children}</div>
+        <main className="flex-1 overflow-y-auto px-4 py-6 sm:px-6 lg:px-10 lg:py-8">
+          <div className="mx-auto w-full max-w-7xl">{children}</div>
         </main>
       </div>
     </div>

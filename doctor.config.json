@@ -1,0 +1,46 @@
+{
+  "$schema": "https://react.doctor/schema/config.json",
+  "ignore": {
+    "overrides": [
+      {
+        // prisma/seed.ts adalah skrip Node non-React. "Sequential awaits" &
+        // "await in loop" di sini DISENGAJA: urutan delete mengikuti foreign-key,
+        // dan pembuatan siswa memakai counter NISN sekuensial yang deterministik
+        // (penting agar data demo reprodusibel). Bukan render path React.
+        "files": ["prisma/**"],
+        "rules": [
+          "react-doctor/async-parallel",
+          "react-doctor/async-await-in-loop"
+        ]
+      },
+      {
+        // FALSE POSITIVE: di route ini `await rateLimit(`...:${ctx.userId}`)`
+        // MEMAKAI hasil `await requireContext()` sebelumnya (lewat template
+        // literal), jadi TIDAK bisa diparalelkan — dan auth memang harus jalan
+        // sebelum rate-limit. Analyzer tak melihat dependensi via template string.
+        "files": [
+          "src/app/api/auth/logout/route.ts",
+          "src/app/api/intervensi/[id]/route.ts"
+        ],
+        "rules": ["react-doctor/async-parallel"]
+      },
+      {
+        // Chart Recharts: (1) role="img"+aria-label adalah pola a11y yang BENAR
+        // untuk visualisasi data (tak ada elemen HTML native untuk grafik);
+        // (2) Recharts memang sengaja di-import di komponen chart — chart ADALAH
+        // konten utama halaman, bukan dependency berat yang tak perlu.
+        "files": ["src/components/charts/recharts/**"],
+        "rules": [
+          "react-doctor/prefer-tag-over-role",
+          "react-doctor/prefer-dynamic-import"
+        ]
+      }
+    ],
+    "rules": [
+      // `sharp` TIDAK unused: dipakai next/image (komponen <Image> di Hero) untuk
+      // optimasi gambar di build/produksi self-host. Detektor dead-dep tak
+      // melihat ketergantungan runtime Next ini. Wajib tetap di dependencies.
+      "deslop/unused-dependency"
+    ]
+  }
+}

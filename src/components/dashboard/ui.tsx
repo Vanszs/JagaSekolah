@@ -1,10 +1,8 @@
 import type { KategoriRisiko } from "@prisma/client";
+import { RISK_CONFIG } from "@/lib/risk";
 
-const RISK: Record<KategoriRisiko, { label: string; dot: string; text: string; ring: string; bg: string }> = {
-  merah: { label: "Risiko Tinggi", dot: "bg-red-500", text: "text-red-700", ring: "ring-red-600/20", bg: "bg-red-50" },
-  kuning: { label: "Waspada", dot: "bg-amber-500", text: "text-amber-700", ring: "ring-amber-600/20", bg: "bg-amber-50" },
-  hijau: { label: "Aman", dot: "bg-emerald-500", text: "text-emerald-700", ring: "ring-emerald-600/20", bg: "bg-emerald-50" },
-};
+/** Alias internal singkat. */
+const RISK = RISK_CONFIG;
 
 export function RiskBadge({ kategori }: { kategori: KategoriRisiko }) {
   const r = RISK[kategori];

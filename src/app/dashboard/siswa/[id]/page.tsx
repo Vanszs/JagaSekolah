@@ -7,30 +7,24 @@ import { requireDashboardContext } from "@/lib/session";
 import { resolveSiswa } from "@/lib/resolveSiswa";
 import { AuthError } from "@/lib/rbac";
 import { RiskBadge, EmptyState } from "@/components/dashboard/ui";
+import { parseAlasan } from "@/lib/parseAlasan";
 
 export const dynamic = "force-dynamic";
 
-function parseAlasan(json: string): { alasan: string[]; saran: string[] } {
-  try {
-    const p = JSON.parse(json) as { alasan?: unknown; saran?: unknown };
-    const arr = (v: unknown) => (Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : []);
-    return { alasan: arr(p.alasan), saran: arr(p.saran) };
-  } catch {
-    return { alasan: [], saran: [] };
-  }
-}
-
 export default async function SiswaDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const ctx = await requireDashboardContext(`/dashboard/siswa/${(await params).id}`);
   const { id } = await params;
+  const ctx = await requireDashboardContext(`/dashboard/siswa/${id}`);
 
-  // IDOR-safe: lempar 403 (uniform) bila bukan milik tenant.
+  // IDOR-safe: notFound() melempar kontrol-alur Next, jadi panggil DI LUAR
+  // try/catch. Tangkap AuthError jadi sentinel, lalu notFound() setelahnya.
+  let allowed = true;
   try {
     await resolveSiswa(ctx, id);
   } catch (e) {
-    if (e instanceof AuthError) notFound();
-    throw e;
+    if (e instanceof AuthError) allowed = false;
+    else throw e;
   }
+  if (!allowed) notFound();
 
   const siswa = await prisma.siswa.findUnique({
     where: { id },
@@ -89,6 +83,9 @@ export default async function SiswaDetailPage({ params }: { params: Promise<{ id
           <h1 className="font-display text-2xl font-bold tracking-tight text-[#0F172A]">{siswa.nama}</h1>
           <p className="mt-1 text-sm text-slate-500">
             {siswa.kelas.nama} · NISN <span className="tabular-nums">{siswa.nisn}</span>
+            {siswa.jenisKelamin && (
+              <> · {siswa.jenisKelamin === "L" ? "Laki-laki" : siswa.jenisKelamin === "P" ? "Perempuan" : siswa.jenisKelamin}</>
+            )}
             {siswa.penerimaKip && (
               <span className="ml-2 rounded-md bg-blue-50 px-1.5 py-0.5 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-600/20">
                 Penerima KIP
@@ -122,8 +119,8 @@ export default async function SiswaDetailPage({ params }: { params: Promise<{ id
             </h2>
             {alasan.length > 0 ? (
               <ul className="mt-3 space-y-2">
-                {alasan.map((a, i) => (
-                  <li key={i} className="flex gap-2.5 text-sm text-slate-700">
+                {alasan.map((a) => (
+                  <li key={a} className="flex gap-2.5 text-sm text-slate-700">
                     <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-slate-400" aria-hidden="true" />
                     {a}
                   </li>
@@ -142,8 +139,8 @@ export default async function SiswaDetailPage({ params }: { params: Promise<{ id
             </h2>
             {saran.length > 0 ? (
               <ul className="mt-3 space-y-2">
-                {saran.map((s, i) => (
-                  <li key={i} className="flex gap-2.5 text-sm text-slate-700">
+                {saran.map((s) => (
+                  <li key={s} className="flex gap-2.5 text-sm text-slate-700">
                     <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#005D4C]" aria-hidden="true" />
                     {s}
                   </li>
@@ -200,10 +197,10 @@ export default async function SiswaDetailPage({ params }: { params: Promise<{ id
             <p className="mt-3 text-sm text-slate-500">Belum ada nilai tercatat.</p>
           ) : (
             <ul className="mt-3 divide-y divide-slate-100">
-              {siswa.nilai.map((n, i) => {
+              {siswa.nilai.map((n) => {
                 const below = n.nilai < n.kkm;
                 return (
-                  <li key={i} className="flex items-center justify-between py-2 text-sm">
+                  <li key={`${n.mapel}-${n.periode}`} className="flex items-center justify-between py-2 text-sm">
                     <span className="text-slate-700">
                       {n.mapel} <span className="text-xs text-slate-400">· {n.periode}</span>
                     </span>
