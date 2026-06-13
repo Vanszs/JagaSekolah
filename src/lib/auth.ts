@@ -7,16 +7,30 @@ import { prisma } from "@/lib/db";
 import type { Role } from "@prisma/client";
 
 const CredsSchema = z.object({
-  email: z.string().email(),
+  email: z.string().trim().toLowerCase().email(),
   password: z.string().min(1),
 });
 
 const googleEnabled = !!(process.env.AUTH_GOOGLE_ID && process.env.AUTH_GOOGLE_SECRET);
 
-export const { handlers, auth, signOut } = NextAuth({
+export const { handlers, auth, signIn, signOut } = NextAuth({
   session: { strategy: "jwt", maxAge: 15 * 60 }, // 15 menit (short expiry)
   jwt: { maxAge: 15 * 60 },
   pages: { signIn: "/login" },
+  // Logger: kegagalan kredensial (password salah / field kosong) adalah hal
+  // NORMAL — turunkan jadi 1 baris warning, jangan cetak stack trace yang
+  // membuatnya terlihat seperti crash. Error lain tetap dicetak penuh.
+  logger: {
+    error(error: Error) {
+      if (error.name === "CredentialsSignin" || error.name === "CallbackRouteError") {
+        console.warn("[auth] Login gagal: kredensial tidak cocok.");
+        return;
+      }
+      console.error("[auth]", error);
+    },
+    warn() {},
+    debug() {},
+  },
   providers: [
     Credentials({
       credentials: { email: {}, password: {} },
