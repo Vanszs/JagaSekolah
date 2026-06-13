@@ -15,6 +15,7 @@ import { randomUUID } from "node:crypto";
 import { scoreSiswa } from "../src/lib/scoring/rules";
 import type { SiswaInput } from "../src/lib/scoring/types";
 import { encodePII } from "../src/lib/siswaPII";
+import { SEED_REGIONS } from "../src/lib/seed/regions";
 
 const prisma = new PrismaClient();
 faker.seed(2026);
@@ -143,14 +144,27 @@ async function main() {
   console.log("Seeding multi-tenant (data sintetis)...");
   await bersihkan();
 
-  // ===== Wilayah =====
-  const wilayah = await prisma.wilayah.create({ data: { provinsi: "Jawa Tengah", kabupaten: "Kabupaten Sintetis" } });
+  // ===== Wilayah & Sekolah NYATA (data daerah Indonesia asli) =====
+  // Semua provinsi/kabupaten dibuat agar dashboard nasional menampilkan sebaran
+  // wilayah Indonesia yang sebenarnya. Dua sekolah dijadikan "demo" (diberi
+  // kelas + siswa + akun): satu perkotaan, satu 3T.
+  const sekolahByNpsn = new Map<string, { id: string; wilayahId: string }>();
+  for (const prov of SEED_REGIONS) {
+    for (const kab of prov.kabupatenList) {
+      const wil = await prisma.wilayah.create({ data: { provinsi: prov.provinsi, kabupaten: kab.kabupaten } });
+      for (const sek of kab.sekolah) {
+        const s = await prisma.sekolah.create({ data: { npsn: sek.npsn, nama: sek.nama, wilayahId: wil.id } });
+        sekolahByNpsn.set(sek.npsn, { id: s.id, wilayahId: wil.id });
+      }
+    }
+  }
 
-  // ===== Sekolah dalam wilayah ===== (independen -> paralel)
-  const [sekolahA, sekolahB] = await Promise.all([
-    prisma.sekolah.create({ data: { npsn: "20200001", nama: "SMP Negeri Sintetis 1", wilayahId: wilayah.id } }),
-    prisma.sekolah.create({ data: { npsn: "20200002", nama: "SMP Negeri Sintetis 2 (3T)", wilayahId: wilayah.id } }),
-  ]);
+  // Anchor demo: SMP Negeri 1 Surabaya (perkotaan) + SMP Negeri 1 Wamena (3T Papua Pegunungan).
+  const NPSN_DEMO_A = "20500101"; // SMP Negeri 1 Surabaya
+  const NPSN_DEMO_B = "60300201"; // SMP Negeri 1 Wamena (3T)
+  const sekolahA = sekolahByNpsn.get(NPSN_DEMO_A)!;
+  const sekolahB = sekolahByNpsn.get(NPSN_DEMO_B)!;
+  const wilayah = { id: sekolahA.wilayahId }; // dinas demo mengawasi wilayah sekolah A
 
   const [kelas8A, kelas8B, kelas9A] = await Promise.all([
     prisma.kelas.create({ data: { sekolahId: sekolahA.id, nama: "VIII-A" } }),
@@ -182,10 +196,10 @@ async function main() {
   const [, , , guru, , bk] = await Promise.all([
     prisma.user.create({ data: { nama: "Super Admin", email: email.super, passwordHash: phSuper, role: "superadmin" } }),
     prisma.user.create({ data: { nama: "Dinas Pendidikan", email: email.dinas, passwordHash: phDinas, role: "dinas", wilayahId: wilayah.id } }),
-    prisma.user.create({ data: { nama: "Kepala SMP 1", email: email.kepsek, passwordHash: phKepsek, role: "kepsek", sekolahId: sekolahA.id } }),
+    prisma.user.create({ data: { nama: "Kepala Sekolah", email: email.kepsek, passwordHash: phKepsek, role: "kepsek", sekolahId: sekolahA.id } }),
     prisma.user.create({ data: { nama: "Wali VIII-A", email: email.guru, passwordHash: phGuru, role: "guru", sekolahId: sekolahA.id, kelasId: kelas8A.id } }),
     prisma.user.create({ data: { nama: "Wali VIII-B", email: email.guru2, passwordHash: phGuru, role: "guru", sekolahId: sekolahA.id, kelasId: kelas8B.id } }),
-    prisma.user.create({ data: { nama: "Guru BK SMP 1", email: email.bk, passwordHash: phBk, role: "bk", sekolahId: sekolahA.id } }),
+    prisma.user.create({ data: { nama: "Guru BK", email: email.bk, passwordHash: phBk, role: "bk", sekolahId: sekolahA.id } }),
   ]);
 
   // ===== Distribusi profil =====
@@ -296,7 +310,8 @@ async function main() {
 
   const recall = totalDropout > 0 ? ((dropoutMerah / totalDropout) * 100).toFixed(0) : "0";
   console.log("------------------------------------------------------");
-  console.log(`Wilayah:1 Sekolah:2 Kelas:3 Siswa:${distribusi.length}`);
+  const [totalWilayah, totalSekolah] = await Promise.all([prisma.wilayah.count(), prisma.sekolah.count()]);
+  console.log(`Wilayah:${totalWilayah} Sekolah:${totalSekolah} (demo: 2 sekolah berdata) Kelas:3 Siswa:${distribusi.length}`);
   console.log(`Risiko -> hijau:${tally.hijau} kuning:${tally.kuning} merah:${tally.merah}`);
   console.log(`Retrospektif: ${dropoutMerah}/${totalDropout} dropout terdeteksi MERAH (recall ~${recall}%)`);
   console.log("Login (email | role):");
