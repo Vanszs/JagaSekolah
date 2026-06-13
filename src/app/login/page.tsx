@@ -9,8 +9,8 @@ import { loginWithCredentials, loginWithGoogle } from "./actions";
 
 const ERRORS: Record<string, string> = {
   CredentialsSignin: "Email atau kata sandi salah.",
-  AccessDenied: "Email ini belum terdaftar. Hubungi admin sekolah Anda.",
-  OAuthAccountNotLinked: "Email ini sudah terdaftar dengan metode lain.",
+  AccessDenied: "Email ini belum terdaftar di JagaSekolah. Hubungi admin sekolah Anda — pendaftaran tidak dilakukan lewat Google.",
+  EmailNotVerified: "Email Google Anda belum terverifikasi. Verifikasi dulu di akun Google Anda.",
   default: "Terjadi kesalahan saat masuk. Coba lagi.",
 };
 

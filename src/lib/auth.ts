@@ -63,8 +63,16 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       : []),
   ],
   callbacks: {
-    signIn: ({ user, account }) =>
-      signInGuard({ provider: account?.provider, email: user.email }, ports),
+    signIn: ({ user, account, profile }) =>
+      signInGuard(
+        {
+          provider: account?.provider,
+          email: user.email ?? (profile?.email as string | undefined),
+          // Google mengirim email_verified di profile OIDC.
+          emailVerified: (profile?.email_verified as boolean | undefined) ?? null,
+        },
+        ports,
+      ),
     jwt: ({ token, user }) =>
       enrichJwt(token as JwtToken, user as Parameters<typeof enrichJwt>[1], ports),
     async session({ session, token }) {

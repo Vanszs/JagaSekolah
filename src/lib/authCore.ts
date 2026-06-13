@@ -72,17 +72,31 @@ export async function authorizeCredentials(
 }
 
 /**
- * Guard signIn untuk OAuth Google: hanya email yang sudah di-provisioning
- * (User aktif) yang boleh masuk. Credentials selalu lolos (sudah divalidasi
- * di authorizeCredentials). Return true | false | redirect-url.
+ * Guard signIn untuk OAuth Google. Aturan (LOGIN-ONLY, TANPA REGISTRASI):
+ *  1. Credentials selalu lolos (sudah divalidasi di authorizeCredentials).
+ *  2. Google: email WAJIB sudah diverifikasi Google (email_verified) — cegah
+ *     penyalahgunaan akun Google dgn email belum terverifikasi.
+ *  3. Google: email harus SUDAH terdaftar sebagai User aktif di DB. Tidak ada
+ *     pembuatan akun otomatis. Bila tidak terdaftar/nonaktif -> AccessDenied.
+ *
+ * Karena identitas akhir diambil dari DB lewat email (lihat enrichJwt), login
+ * via Google dan via kredensial menghasilkan sesi yang IDENTIK untuk email yang
+ * sama. Google hanya membuktikan kepemilikan email; otorisasi tetap dari DB.
+ * Return: true (boleh) | false (tolak diam) | "/login?error=..." (redirect).
  */
 export async function signInGuard(
-  args: { provider: string | undefined; email: string | null | undefined },
+  args: {
+    provider: string | undefined;
+    email: string | null | undefined;
+    emailVerified?: boolean | null;
+  },
   ports: Pick<AuthPorts, "findUserByEmail">,
 ): Promise<boolean | string> {
   if (args.provider !== "google") return true;
   const email = args.email?.toLowerCase();
   if (!email) return false;
+  // Google harus sudah memverifikasi email ini.
+  if (args.emailVerified !== true) return "/login?error=EmailNotVerified";
   const existing = await ports.findUserByEmail(email);
   if (!existing || !existing.aktif) return "/login?error=AccessDenied";
   return true;

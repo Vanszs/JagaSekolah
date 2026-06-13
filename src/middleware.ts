@@ -1,8 +1,10 @@
-import { auth } from "@/lib/auth";
+import { authEdge } from "@/lib/authEdge";
 import { NextResponse } from "next/server";
 
-// Proteksi semua route kecuali publik. Auth.js v5 middleware.
-export default auth((req) => {
+// Proteksi route via Auth.js v5 middleware (Edge runtime).
+// PENTING: pakai authEdge (token-only, TANPA Prisma) — instance penuh di auth.ts
+// memakai Prisma di session callback yang TIDAK bisa jalan di Edge.
+export default authEdge((req) => {
   const { pathname } = req.nextUrl;
 
   // Route publik (landing, login, auth & health API).
@@ -33,6 +35,8 @@ export default auth((req) => {
 
 export const config = {
   // Kecualikan aset statis Next + file publik (gambar/font) agar tidak kena proteksi.
+  // /dashboard tetap diproteksi di sini (authEdge token-only, aman di Edge) DAN
+  // di layout (Node, dengan pengecekan revocation Prisma yang otoritatif).
   matcher: [
     "/((?!_next/static|_next/image|images/|geo/|favicon.ico|manifest.json|icons|.*\\.(?:png|jpg|jpeg|webp|avif|gif|svg|ico|woff2?|json|geojson)$).*)",
   ],
