@@ -206,10 +206,20 @@ browser superadmin Analisis Risiko (KPI+histogram+faktor real data, 0 console er
 - Import modul via alias `@/` (→ `src/`).
 - **TANPA Prisma/DB/network di unit test** — pakai pure function + dependency injection
   (lihat pola `tests/authCore.test.ts` ports, `tests/applySync.test.ts` SyncPort).
-- Saat ini **340 test / 0 fail**. File test: authCore, api, rules, rules-scenarios,
+- Saat ini **444 test / 0 fail**. File test: authCore, api, rules, rules-scenarios,
   features, buildInput, explain, thresholds, columnMap, parse, nav, rateLimit, rbac,
-  cleaning, envelope, applySync, analyticsBuckets. (crypto.test.ts DIHAPUS — modul
-  `crypto.ts` mati, diganti `envelope.ts`+`siswaPII.ts`.)
+  cleaning, envelope, applySync, analyticsBuckets, rbacScenarios (53: scope/IDOR/
+  creatableRoles per 5 role), analyticsKernels (21: agregasi+div-by-zero guard),
+  navIntegrity (dead-link guard vs page.tsx on disk), scoringField (skenario lapangan
+  3T/musiman/bencana Indonesia), seedRegions (validasi data wilayah nyata).
+  (crypto.test.ts DIHAPUS.)
+- **Kernel murni testable** (tanpa DB): `src/lib/resolveSiswa.ts` → `authorizeResolvedSiswa`;
+  `src/lib/analyticsKernels.ts` → transformPlatformByProvinsi/UsersByRole/ConsentBySekolah/
+  AuditByAksi + computeConsentPct (analytics.ts memanggilnya). Pola: ekstrak transform
+  dari panggilan prisma → uji dgn fixture array.
+- **Data wilayah NYATA**: `src/lib/seed/regions.ts` (SEED_REGIONS) — 15 provinsi real
+  (Aceh→Papua Pegunungan), 24 kabupaten (14 3T), NPSN 8-digit sintetis. Seed membuat
+  semua wilayah; demo accounts anchored ke SMP N 1 Surabaya (urban) + SMP N 1 Wamena (3T).
 
 ---
 
