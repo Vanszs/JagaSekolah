@@ -70,11 +70,18 @@ services:
     restart: unless-stopped
 
   # FASE 2 (opsional) - aktifkan dengan: docker compose --profile ml up
+  # App menemukan service ini via ML_SERVICE_URL (set di env app saat profile aktif).
   ml-service:
     build: ./ml-service
     profiles: ["ml"]
     ports:
-      - "8001:8001"
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/health').status==200 else 1)\""]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
     restart: unless-stopped
 
 volumes:

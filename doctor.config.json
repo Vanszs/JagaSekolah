@@ -34,6 +34,20 @@
           "react-doctor/prefer-tag-over-role",
           "react-doctor/prefer-dynamic-import"
         ]
+      },
+      {
+        // Lapis ML (fase 2). `await-in-loop` di sini DISENGAJA dan TIDAK boleh
+        // diparalelkan:
+        //  - client.ts predictRemote: loop = RETRY berurutan (attempt → cek →
+        //    backoff → ulang). Paralel = bukan retry.
+        //  - recompute/route.ts mapWithConcurrency: worker pool dengan BATAS
+        //    konkurensi yang sengaja (cegah membanjiri service ML / DB). Promise.all
+        //    tanpa batas justru anti-pola di sini.
+        "files": [
+          "src/lib/ml/client.ts",
+          "src/app/api/risiko/recompute/route.ts"
+        ],
+        "rules": ["react-doctor/async-await-in-loop"]
       }
     ],
     "rules": [

@@ -74,11 +74,25 @@ browser superadmin Analisis Risiko (KPI+histogram+faktor real data, 0 console er
 **Verified sesi 4:** tsc clean · **463 test / 0 fail** · build OK (19 hal) · react-doctor 100/100 ·
 browser dinas/superadmin terkonfirmasi (breadcrumb, chart batang render, scope wilayah).
 
+**Sesi 5 (TERBARU) — lapis ML prediksi yang ROBUST (Fase 2, opsional):**
+| Area | Isi |
+|------|-----|
+| `src/lib/ml/types.ts` | Kontrak: `MlFeaturePayload` (14 fitur datar, `FEATURE_VERSION=1.0.0`), `MlPredictionSchema` (Zod: `probabilitas` finite 0..1), `MlClientResult` (union never-throws), `BlendedRisiko`+`MlInfo`. |
+| `src/lib/ml/client.ts` | Klien HTTP robust: `CircuitBreaker` 3-state, `predictRemote` NEVER-THROWS (disabled→circuit_open→attempt+retry-transient-only), AbortController timeout, Zod-validate. Semua dep di-inject. Knob via env (`ML_TIMEOUT_MS/MAX_RETRIES/BACKOFF/BREAKER_*`). |
+| `src/lib/ml/predict.ts` | Orkestrator: `featuresToPayload` (pure), `blendRiskWithMl` (pure, **escalate-only** — ML hanya menaikkan, tak pernah menurunkan; child-safety), `mlAlasanItem` (alasan transparan bobot-0), `predictAndBlend` (async never-throws, predict injectable). |
+| `recompute/route.ts` | Opt-in `ML_SERVICE_URL`: OFF → jalur rule murni identik; ON → blend per siswa via `mapWithConcurrency(8)`, embed `ml` info + alasan transparan di `alasanJson`, `sumber` ikut blend. Return `{dihitung,sumber}`. |
+| `ml-service/` | Python FastAPI: `schema.py` (Pydantic, cermin TS), `train.py` (LogReg+StandardScaler, data SINTETIS ABC-weighted → `model.joblib`), `app.py` (`/health`+`/predict`, auto-train bila model absen), Dockerfile (train saat build + healthcheck), requirements pinned, README. compose `--profile ml` port 8000. |
+| tests | `mlClient.test.ts` (8) + `mlPredict.test.ts` (12) = +20 → **483 test**. Breaker/timeout/retry/Zod-reject/fallback/escalate-only/sumber, semua via port disuntik (tanpa network). |
+
+**Verified sesi 5:** tsc clean · **483 test / 0 fail** · build OK · react-doctor 100/100 ·
+Python `py_compile` OK. doctor.config: 2 `async-await-in-loop` ML (retry sekuensial +
+worker-pool berbatas) didokumentasikan sebagai disengaja.
+
 ---
 
 ## 3. STATUS SAAT INI
 
-- **Working tree CLEAN.** tsc bersih · **463 test / 0 fail** · build OK · react-doctor 100/100.
+- **Working tree CLEAN.** tsc bersih · **483 test / 0 fail** · build OK · react-doctor 100/100.
 - **Sidebar final per role**: superadmin 12 (3-grup ANALITIK/PLATFORM/KEAMANAN),
   **dinas 10** (analitik mirror superadmin + Telusur Siswa + Perbandingan + Laporan, TANPA root),
   kepsek 8 (2-grup SEKOLAH/KELOLA), guru 5, bk 6. Semua route punya halaman nyata (no dead link).

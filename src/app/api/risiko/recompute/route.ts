@@ -7,8 +7,68 @@ import { scoreSiswa } from "@/lib/scoring/rules";
 import { decodePII } from "@/lib/siswaPII";
 import { audit, clientIp } from "@/lib/audit";
 import { chunk, withSerialLock } from "@/lib/concurrency";
+import { isMlEnabled, defaultMlConfig } from "@/lib/ml/client";
+import { predictAndBlend, mlAlasanItem } from "@/lib/ml/predict";
+import type { BlendedRisiko } from "@/lib/ml/types";
 
 const BATCH = 500;
+const ML_CONCURRENCY = 8;
+
+/** Bangun baris Risiko dari hasil rule murni (jalur cepat, ML nonaktif). */
+function ruleRow(s: { id: string; sekolahId: string }, hasil: ReturnType<typeof scoreSiswa>, now: Date) {
+  return {
+    siswaId: s.id,
+    sekolahId: s.sekolahId,
+    tanggalHitung: now,
+    kategori: hasil.kategori,
+    skor: hasil.skor,
+    alasanJson: JSON.stringify({ alasan: hasil.alasan, saran: hasil.saran }),
+    sumber: "rule" as const,
+    configVersion: hasil.configVersion,
+    isLatest: true,
+  };
+}
+
+/** Bangun baris Risiko dari hasil blend rule+ML (jalur ML aktif). Transparan. */
+function blendedRow(
+  s: { id: string; sekolahId: string },
+  hasil: ReturnType<typeof scoreSiswa>,
+  blend: BlendedRisiko,
+  now: Date
+) {
+  const mlReason = mlAlasanItem(blend);
+  const alasan = mlReason ? [mlReason, ...hasil.alasan] : hasil.alasan;
+  return {
+    siswaId: s.id,
+    sekolahId: s.sekolahId,
+    tanggalHitung: now,
+    kategori: blend.kategori,
+    skor: blend.skor,
+    alasanJson: JSON.stringify({ alasan, saran: hasil.saran, ml: blend.mlInfo }),
+    sumber: blend.sumber,
+    configVersion: hasil.configVersion,
+    isLatest: true,
+  };
+}
+
+/** Jalankan tugas async dengan batas konkurensi (cegah membanjiri service ML). */
+async function mapWithConcurrency<T, R>(
+  items: T[],
+  limit: number,
+  fn: (item: T) => Promise<R>
+): Promise<R[]> {
+  const out: R[] = new Array(items.length);
+  let next = 0;
+  const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
+    while (true) {
+      const i = next++;
+      if (i >= items.length) return;
+      out[i] = await fn(items[i]!);
+    }
+  });
+  await Promise.all(workers);
+  return out;
+}
 
 /**
  * POST /api/risiko/recompute
@@ -16,6 +76,10 @@ const BATCH = 500;
  * - HANYA siswa consentStatus=granted yang diproses (UU PDP data anak).
  * - Serialize per tenant (cegah race isLatest).
  * - Chunked transaction (batch 500) -> aman untuk skala besar.
+ * - ML (FASE 2, opsional): bila ML_SERVICE_URL diset, skor di-blend dengan prediksi
+ *   model secara TRANSPARAN & ESCALATE-ONLY; bila service mati/lambat/tak valid →
+ *   otomatis fallback ke rule-based (tak merusak hasil). Bila URL tak diset → jalur
+ *   rule murni identik seperti sebelumnya.
  */
 export async function POST(req: Request) {
   return apiHandler(
@@ -24,6 +88,9 @@ export async function POST(req: Request) {
       requireRole(ctx, "guru", "bk", "kepsek", "superadmin");
       await rateLimit(`recompute:${ctx.userId}`);
       const scope = siswaScope(ctx); // dinas -> 403
+
+      const mlCfg = defaultMlConfig();
+      const mlOn = isMlEnabled(mlCfg);
 
       const lockKey = `recompute:${ctx.sekolahId ?? "all"}`;
       const dihitung = await withSerialLock(lockKey, async () => {
@@ -47,23 +114,13 @@ export async function POST(req: Request) {
         if (siswa.length === 0) return 0;
 
         const now = new Date();
-        const rows = await Promise.all(
-          siswa.map(async (s) => {
-            const pii = await decodePII(s);
-            const hasil = scoreSiswa(buildSiswaInput(s, pii));
-            return {
-              siswaId: s.id,
-              sekolahId: s.sekolahId,
-              tanggalHitung: now,
-              kategori: hasil.kategori,
-              skor: hasil.skor,
-              alasanJson: JSON.stringify({ alasan: hasil.alasan, saran: hasil.saran }),
-              sumber: "rule" as const,
-              configVersion: hasil.configVersion,
-              isLatest: true,
-            };
-          })
-        );
+        const rows = await mapWithConcurrency(siswa, mlOn ? ML_CONCURRENCY : siswa.length, async (s) => {
+          const pii = await decodePII(s);
+          const input = buildSiswaInput(s, pii);
+          if (!mlOn) return ruleRow(s, scoreSiswa(input), now);
+          const { hasil, blend } = await predictAndBlend(input, { config: mlCfg });
+          return blendedRow(s, hasil, blend, now);
+        });
 
         // Chunked: matikan isLatest lama + insert baru, per batch dalam transaksi
         for (const part of chunk(rows, BATCH)) {
@@ -79,8 +136,13 @@ export async function POST(req: Request) {
         return rows.length;
       });
 
-      await audit(ctx, "recompute", `tenant:${ctx.sekolahId ?? "all"}:${dihitung}`, clientIp(req));
-      return { dihitung };
+      await audit(
+        ctx,
+        "recompute",
+        `tenant:${ctx.sekolahId ?? "all"}:${dihitung}:${mlOn ? "ml" : "rule"}`,
+        clientIp(req)
+      );
+      return { dihitung, sumber: mlOn ? "ml" : "rule" };
     },
     { req, route: "POST /api/risiko/recompute" }
   );
