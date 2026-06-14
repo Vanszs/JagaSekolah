@@ -58,11 +58,14 @@ export function StatTile({
   );
 }
 
-export function PageHeader({ title, desc }: { title: string; desc?: string }) {
+export function PageHeader({ title, desc, action }: { title: string; desc?: string; action?: React.ReactNode }) {
   return (
-    <div className="mb-6">
-      <h1 className="font-display text-xl font-bold tracking-tight text-[#0F172A] sm:text-2xl">{title}</h1>
-      {desc && <p className="mt-1 max-w-prose text-sm text-slate-600">{desc}</p>}
+    <div className="mb-6 flex items-start justify-between gap-4">
+      <div>
+        <h1 className="font-display text-xl font-bold tracking-tight text-[#0F172A] sm:text-2xl">{title}</h1>
+        {desc && <p className="mt-1 max-w-prose text-sm text-slate-600">{desc}</p>}
+      </div>
+      {action && <div className="shrink-0">{action}</div>}
     </div>
   );
 }

@@ -37,6 +37,21 @@ export default async function GuruBKDashboard({ role, scope }: { role: Role; sco
 
   return (
     <div className="space-y-8">
+      {/* Greeting banner — teal accent per Pencil design */}
+      <div className="flex items-center justify-between rounded-lg border border-teal-100 bg-teal-50 px-5 py-3.5">
+        <div>
+          <p className="text-sm font-semibold text-[#005D4C]">
+            {isBK ? "Dashboard Bimbingan & Konseling" : "Dashboard Wali Kelas"}
+          </p>
+          <p className="mt-0.5 text-xs text-teal-700">
+            {isBK
+              ? "Kasus mana yang harus ditangani hari ini."
+              : "Siswa mana yang harus dibantu hari ini."}
+          </p>
+        </div>
+        <span className="text-xl" aria-hidden="true">{isBK ? "🤝" : "📚"}</span>
+      </div>
+
       <PageHeader
         title={isBK ? "Dashboard BK" : "Dashboard Kelas"}
         desc={isBK ? "Kasus mana yang harus ditangani — ringkasan kasus & tindak lanjut." : "Siswa mana yang harus dibantu hari ini — pantauan kelas Anda."}

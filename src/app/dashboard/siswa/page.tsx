@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 import { requireDashboardContext } from "@/lib/session";
 import { siswaScope, AuthError } from "@/lib/rbac";
 import { PageHeader, RiskDot, EmptyState } from "@/components/dashboard/ui";
+import { RecomputeButton } from "@/components/dashboard/RecomputeButton";
 
 export const dynamic = "force-dynamic";
 
@@ -104,6 +105,7 @@ export default async function SiswaListPage({
       <PageHeader
         title="Daftar Siswa"
         desc="Setiap siswa disertai label dan skor risiko. Klik untuk melihat alasan dan riwayat."
+        action={<RecomputeButton />}
       />
 
       {/* Toolbar: search + filter */}
