@@ -146,7 +146,7 @@ export default async function SiswaListPage({
           desc={search || kategori ? "Tidak ada hasil untuk filter ini. Coba ubah pencarian." : "Belum ada data siswa di lingkup Anda."}
         />
       ) : (
-        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+        <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
           <div className="overflow-x-auto">
             <table className="min-w-full text-sm">
               <thead className="text-[11px] uppercase tracking-wide text-slate-400">

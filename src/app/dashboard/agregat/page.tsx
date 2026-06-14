@@ -78,7 +78,7 @@ export default async function AgregatPage() {
           <EmptyState title="Belum ada sekolah" desc="Tidak ada sekolah terdaftar di wilayah ini." />
         </div>
       ) : (
-        <div className="mt-8 overflow-hidden rounded-xl border border-slate-200 bg-white">
+        <div className="mt-8 overflow-hidden rounded-lg border border-slate-200 bg-white">
           <div className="overflow-x-auto">
             <table className="min-w-full text-sm">
               <thead className="text-[11px] uppercase tracking-wide text-slate-400">

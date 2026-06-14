@@ -114,7 +114,7 @@ export default async function SiswaDetailPage({ params }: { params: Promise<{ id
       ) : (
         <div className="mt-6 grid gap-5 lg:grid-cols-2">
           {/* Alasan — transparansi */}
-          <section className="rounded-xl border border-slate-200 bg-white p-5">
+          <section className="rounded-lg border border-slate-200 bg-white p-5">
             <h2 className="flex items-center gap-2 font-display text-base font-semibold text-[#0F172A]">
               <TriangleAlert className="h-4 w-4 text-[#005D4C]" aria-hidden="true" />
               Mengapa ditandai begini
@@ -134,7 +134,7 @@ export default async function SiswaDetailPage({ params }: { params: Promise<{ id
           </section>
 
           {/* Saran tindakan */}
-          <section className="rounded-xl border border-[#005D4C]/20 bg-[#005D4C]/[0.03] p-5">
+          <section className="rounded-lg border border-[#005D4C]/20 bg-[#005D4C]/[0.03] p-5">
             <h2 className="flex items-center gap-2 font-display text-base font-semibold text-[#0F172A]">
               <Lightbulb className="h-4 w-4 text-[#005D4C]" aria-hidden="true" />
               Saran tindakan
@@ -158,7 +158,7 @@ export default async function SiswaDetailPage({ params }: { params: Promise<{ id
       {/* Konteks data */}
       <div className="mt-5 grid gap-5 lg:grid-cols-2">
         {/* Absensi 30 hari */}
-        <section className="rounded-xl border border-slate-200 bg-white p-5">
+        <section className="rounded-lg border border-slate-200 bg-white p-5">
           <h2 className="flex items-center gap-2 font-display text-base font-semibold text-[#0F172A]">
             <CalendarX className="h-4 w-4 text-slate-400" aria-hidden="true" />
             Kehadiran 30 hari
@@ -190,7 +190,7 @@ export default async function SiswaDetailPage({ params }: { params: Promise<{ id
         </section>
 
         {/* Nilai terbaru */}
-        <section className="rounded-xl border border-slate-200 bg-white p-5">
+        <section className="rounded-lg border border-slate-200 bg-white p-5">
           <h2 className="flex items-center gap-2 font-display text-base font-semibold text-[#0F172A]">
             <GraduationCap className="h-4 w-4 text-slate-400" aria-hidden="true" />
             Nilai terbaru

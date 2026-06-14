@@ -65,7 +65,7 @@ export default async function UsersPage() {
       </div>
 
       {/* Transparansi RBAC */}
-      <div className="flex gap-3 rounded-xl border border-[#005D4C]/20 bg-[#005D4C]/[0.03] p-4">
+      <div className="flex gap-3 rounded-lg border border-[#005D4C]/20 bg-[#005D4C]/[0.03] p-4">
         <Info className="mt-0.5 h-4 w-4 shrink-0 text-[#005D4C]" aria-hidden="true" />
         <div className="text-sm text-slate-700">
           <p className="font-medium text-slate-900">Hak penambahan akun</p>

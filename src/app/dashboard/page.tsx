@@ -19,7 +19,7 @@ export default async function OverviewPage() {
   //    Siswa hanya dicapai lewat drill-down wilayah → sekolah → kelas → siswa.
   if (ctx.role === "superadmin") {
     return (
-      <div className="space-y-10">
+      <div className="space-y-8">
         <NationalOverview />
         <PlatformHealth />
       </div>

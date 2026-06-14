@@ -124,7 +124,7 @@ export default function CreateUserForm({ actorRole, roles, sekolah, wilayah, kel
     "block w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 transition-colors focus:border-[#005D4C] focus:outline-none focus:ring-1 focus:ring-[#005D4C] disabled:bg-slate-50";
 
   return (
-    <form onSubmit={onSubmit} className="space-y-5 rounded-xl border border-slate-200 bg-white p-6">
+    <form onSubmit={onSubmit} className="space-y-5 rounded-lg border border-slate-200 bg-white p-6">
       {success && (
         <p role="status" className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
           <CheckCircle2 className="h-4 w-4 shrink-0" aria-hidden="true" />

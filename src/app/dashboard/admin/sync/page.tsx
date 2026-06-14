@@ -62,7 +62,7 @@ export default async function SyncPage() {
         <SyncLogTable rows={rows} />
       </Panel>
 
-      <section className="rounded-xl border border-dashed border-slate-300 bg-slate-50/60 p-5">
+      <section className="rounded-lg border border-dashed border-slate-300 bg-slate-50/60 p-5">
         <div className="flex items-start gap-3">
           <Info className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" aria-hidden="true" />
           <p className="text-sm text-slate-500">

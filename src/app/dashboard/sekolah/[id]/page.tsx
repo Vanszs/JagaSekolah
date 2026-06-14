@@ -5,7 +5,7 @@ import { requireDashboardContext } from "@/lib/session";
 import { requireRole, assertDinasWilayah } from "@/lib/rbac";
 import { audit } from "@/lib/audit";
 import { riskByKelasInSekolah, monthlyRiskTrend } from "@/lib/analytics";
-import { PageHeader } from "@/components/dashboard/ui";
+import { PageHeader, Panel, ChartSkeleton } from "@/components/dashboard/ui";
 import { Breadcrumbs } from "@/components/dashboard/Breadcrumbs";
 import { RegionTable } from "@/components/dashboard/RegionTable";
 import { RiskTrendLine } from "@/components/charts/recharts/RiskTrendLine";
@@ -37,19 +37,19 @@ export default async function SekolahPage({ params }: { params: Promise<{ id: st
           { label: sekolah.nama },
         ]}
       />
-      <PageHeader title={sekolah.nama} desc={`NPSN ${sekolah.npsn} · ${sekolah.wilayah.kabupaten}, ${sekolah.wilayah.provinsi}`} />
+      <PageHeader title={sekolah.nama} desc={`NPSN ${sekolah.npsn} · ${sekolah.wilayah.kabupaten}, ${sekolah.wilayah.provinsi}`} />      <div className="space-y-6">
+        <Panel title="Tren risiko 12 bulan" desc="Evolusi kategori risiko siswa sepanjang tahun.">
+          <Suspense fallback={<ChartSkeleton h={260} />}>
+            <SchoolTrend sekolahId={id} />
+          </Suspense>
+        </Panel>
 
-      <section className="mb-8 rounded-xl border border-slate-200 bg-white p-6">
-        <h2 className="mb-5 font-display text-base font-semibold text-[#0F172A]">Tren risiko 12 bulan</h2>
-        <Suspense fallback={<div className="h-[260px] animate-pulse rounded-lg bg-slate-100 motion-reduce:animate-none" />}>
-          <SchoolTrend sekolahId={id} />
-        </Suspense>
-      </section>
-
-      <h2 className="mb-3 font-display text-base font-semibold text-[#0F172A]">Risiko per kelas</h2>
-      <Suspense fallback={<div className="h-32 animate-pulse rounded-lg bg-slate-100 motion-reduce:animate-none" />}>
-        <ClassTable sekolahId={id} />
-      </Suspense>
+        <Panel title="Risiko per kelas" desc="Klik nama kelas untuk melihat daftar siswa.">
+          <Suspense fallback={<ChartSkeleton h={160} />}>
+            <ClassTable sekolahId={id} />
+          </Suspense>
+        </Panel>
+      </div>
     </>
   );
 }

@@ -47,7 +47,7 @@ export function StatTile({
           ? "bg-emerald-500"
           : "bg-[#005D4C]";
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-5">
+    <div className="rounded-lg border border-slate-200 bg-white p-5">
       <div className="flex items-center gap-2">
         <span className={`h-2 w-2 rounded-full ${dot}`} aria-hidden="true" />
         <p className="text-xs font-medium text-slate-500">{label}</p>
@@ -80,7 +80,7 @@ export function Panel({
   className?: string;
 }) {
   return (
-    <section className={`rounded-xl border border-slate-200 bg-white p-6 ${className}`}>
+    <section className={`rounded-lg border border-slate-200 bg-white p-6 ${className}`}>
       <div className="mb-5">
         <h2 className="font-display text-base font-semibold text-[#0F172A]">{title}</h2>
         {desc && <p className="mt-0.5 text-sm text-slate-500">{desc}</p>}
@@ -105,7 +105,7 @@ export function EmptyState({
   icon?: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-col items-center rounded-xl border border-dashed border-slate-300 bg-white px-6 py-16 text-center">
+    <div className="flex flex-col items-center rounded-lg border border-dashed border-slate-300 bg-white px-6 py-16 text-center">
       {icon && (
         <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-slate-400">
           {icon}

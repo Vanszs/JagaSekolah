@@ -23,7 +23,7 @@ export default function Loading() {
       <Phantom loading>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {[0, 1, 2, 3].map((i) => (
-            <div key={i} className="rounded-xl border border-slate-200 bg-white p-5">
+            <div key={i} className="rounded-lg border border-slate-200 bg-white p-5">
               <p className="text-xs font-medium text-slate-500">Label metrik</p>
               <p className="mt-2 text-2xl font-semibold tabular-nums text-slate-900">000</p>
             </div>
@@ -35,7 +35,7 @@ export default function Loading() {
           (phantom-ui TIDAK boleh menjadi anak langsung <tbody>). */}
       <div className="mt-8">
         <Phantom loading>
-          <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+          <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
             <div className="overflow-x-auto">
               <table className="min-w-full text-sm">
                 <thead className="text-[11px] uppercase tracking-wide text-slate-400">

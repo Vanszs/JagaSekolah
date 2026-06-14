@@ -68,7 +68,7 @@ export default async function KelasRosterPage({ params }: { params: Promise<{ id
       {rows.length === 0 ? (
         <EmptyState title="Belum ada siswa" desc="Kelas ini belum memiliki data siswa." />
       ) : (
-        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+        <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
           <div className="overflow-x-auto">
             <table className="min-w-full text-sm">
               <thead className="border-b border-slate-100 text-[11px] uppercase tracking-wide text-slate-400">

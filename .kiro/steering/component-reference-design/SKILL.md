@@ -20,6 +20,7 @@ metadata:
     - references/animation.md
     - references/design-systems.md
     - references/charts.md
+    - references/dashboards.md
 ---
 
 # Component Reference Design — Positive Pattern Library
@@ -51,6 +52,7 @@ component variant, and tasteful accessible motion — all copy-pasteable and a11
 | Modal, drawer, toast, tooltip, popover, animation | `references/animation.md` | Overlay/feedback components + tasteful motion patterns (timing, easing, reduced-motion, 13 motion recipes) |
 | Choosing a library / design tokens | `references/design-systems.md` | 18 design-system index (ecosystem, styling, a11y, theming, license, URL) + W3C DTCG tokens + decision matrix |
 | Charts, graphs, KPI cards, sparklines, data-viz | `references/charts.md` | Beautiful modern Recharts patterns: color systems (teal/Okabe-Ito/OKLCH), premium chrome (custom tooltip/legend/axes/grid), bar/line/area/donut/radial, KPI+sparkline cards, specialty (heatmap/treemap/funnel/radar/scatter/bullet/waffle), motion, dark-mode/responsive, a11y, 15-point anti-slop scan |
+| Admin dashboard — app shell, sidebar, topbar, widgets, tables, filters | `references/dashboards.md` | Modern clean admin dashboard: 15 clean-dashboard principles, app shell (grid sidebar+header), sidebar nav (collapsible/rail/groups/footer), topbar (breadcrumb/⌘K search/notif/avatar/org-switcher), command palette, grid composition (KPI→hero+side→table, bento), KPI/stat cards (delta inversion), chart placement/chrome, filters & toolbar (date-range/segmented/chips/saved-views), data table (TanStack/density/sort/selection/pagination), all states (skeleton/empty/error/zero), 3-tier color tokens + dark, anti-pattern cheat sheet |
 
 ## The Anti-Monotony Rules (apply to every multi-section page)
 1. **Never repeat the same section anatomy consecutively.** Vary: centered → split → bento → stats-bar → full-bleed → alternating.

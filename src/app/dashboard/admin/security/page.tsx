@@ -68,7 +68,7 @@ export default async function SecurityPage() {
       />
 
       {/* Enkripsi PII */}
-      <section className="rounded-xl border border-slate-200 bg-white p-5">
+      <section className="rounded-lg border border-slate-200 bg-white p-5">
         <h2 className="flex items-center gap-2 font-display text-base font-semibold text-[#0F172A]">
           <KeyRound className="h-4 w-4 text-[#005D4C]" aria-hidden="true" />
           Enkripsi PII (envelope)
@@ -94,7 +94,7 @@ export default async function SecurityPage() {
       </section>
 
       {/* Persetujuan PDP */}
-      <section className="mt-6 rounded-xl border border-slate-200 bg-white p-5">
+      <section className="mt-6 rounded-lg border border-slate-200 bg-white p-5">
         <h2 className="flex items-center gap-2 font-display text-base font-semibold text-[#0F172A]">
           <ShieldCheck className="h-4 w-4 text-[#005D4C]" aria-hidden="true" />
           Persetujuan PDP (data anak)
@@ -157,7 +157,7 @@ export default async function SecurityPage() {
       )}
 
       {/* Retensi */}
-      <section className="mt-6 rounded-xl border border-slate-200 bg-white p-5">
+      <section className="mt-6 rounded-lg border border-slate-200 bg-white p-5">
         <h2 className="flex items-center gap-2 font-display text-base font-semibold text-[#0F172A]">
           <Clock className="h-4 w-4 text-[#005D4C]" aria-hidden="true" />
           Kebijakan retensi data
