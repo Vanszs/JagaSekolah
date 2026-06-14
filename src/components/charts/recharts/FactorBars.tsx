@@ -21,7 +21,7 @@ export function FactorBars({ data }: { data: FactorDatum[] }) {
           <XAxis type="number" allowDecimals={false} domain={[0, "dataMax"]} hide />
           <YAxis type="category" dataKey="label" tick={{ fill: CHART.label, fontSize: 12 }} axisLine={false} tickLine={false} width={150} />
           <Tooltip content={<ChartTooltip />} cursor={{ fill: "rgba(0,93,76,0.05)" }} />
-          <Bar dataKey="value" name="Siswa berisiko" fill={CHART.brand} radius={[0, 6, 6, 0]} isAnimationActive={!reduced} animationDuration={ANIM_MS} barSize={18}>
+          <Bar dataKey="value" name="Siswa berisiko" fill={CHART.brand} radius={[0, 16, 16, 0]} isAnimationActive={!reduced} animationDuration={ANIM_MS} barSize={18}>
             <LabelList dataKey="value" position="right" className="fill-slate-500" style={{ fontSize: 12, fontVariantNumeric: "tabular-nums" }} />
           </Bar>
         </BarChart>

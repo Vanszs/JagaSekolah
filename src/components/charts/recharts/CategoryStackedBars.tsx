@@ -23,9 +23,9 @@ export function CategoryStackedBars({ data }: { data: CatStackDatum[] }) {
           <YAxis {...yAxisProps} />
           <Tooltip content={<ChartTooltip />} cursor={{ fill: "rgba(0,93,76,0.05)" }} />
           <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 12, paddingTop: 10 }} />
-          <Bar dataKey="merah" name="Risiko tinggi" stackId="r" fill={CHART.merah} isAnimationActive={!reduced} animationDuration={ANIM_MS} maxBarSize={44} />
+          <Bar dataKey="merah" name="Risiko tinggi" stackId="r" fill={CHART.merah} radius={[0, 0, 16, 16]} isAnimationActive={!reduced} animationDuration={ANIM_MS} maxBarSize={44} />
           <Bar dataKey="kuning" name="Waspada" stackId="r" fill={CHART.kuning} isAnimationActive={!reduced} animationDuration={ANIM_MS} maxBarSize={44} />
-          <Bar dataKey="hijau" name="Aman" stackId="r" fill={CHART.hijau} radius={[5, 5, 0, 0]} isAnimationActive={!reduced} animationDuration={ANIM_MS} maxBarSize={44} />
+          <Bar dataKey="hijau" name="Aman" stackId="r" fill={CHART.hijau} radius={[16, 16, 0, 0]} isAnimationActive={!reduced} animationDuration={ANIM_MS} maxBarSize={44} />
         </BarChart>
       </ResponsiveContainer>
     </div>

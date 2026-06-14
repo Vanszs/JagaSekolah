@@ -45,7 +45,7 @@ export function Histogram({
           />
           <YAxis {...yAxisProps} />
           <Tooltip content={<ChartTooltip unit=" siswa" />} cursor={{ fill: "rgba(0,93,76,0.05)" }} />
-          <Bar dataKey="count" name={seriesName} fill={`url(#hist-${gid})`} radius={[5, 5, 0, 0]} isAnimationActive={!reduced} animationDuration={ANIM_MS}>
+          <Bar dataKey="count" name={seriesName} fill={`url(#hist-${gid})`} radius={[16, 16, 0, 0]} isAnimationActive={!reduced} animationDuration={ANIM_MS}>
             <LabelList dataKey="count" position="top" className="fill-slate-500" style={{ fontSize: 12, fontVariantNumeric: "tabular-nums" }} />
           </Bar>
         </BarChart>

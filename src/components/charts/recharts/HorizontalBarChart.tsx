@@ -34,7 +34,7 @@ export function HorizontalBarChart({
           <XAxis type="number" {...axisProps} allowDecimals={false} unit={unit} domain={[0, "dataMax"]} hide />
           <YAxis type="category" dataKey="label" tick={{ fill: CHART.label, fontSize: 12 }} axisLine={false} tickLine={false} width={140} />
           <Tooltip content={<ChartTooltip unit={unit} />} cursor={{ fill: "rgba(0,93,76,0.05)" }} />
-          <Bar dataKey="value" name={seriesName} radius={[0, 6, 6, 0]} isAnimationActive={!reduced} animationDuration={ANIM_MS} barSize={20}>
+          <Bar dataKey="value" name={seriesName} radius={[0, 16, 16, 0]} isAnimationActive={!reduced} animationDuration={ANIM_MS} barSize={20}>
             {data.map((d, i) => (
               <Cell key={`${d.label}-${i}`} fill={d.color ?? barColor} />
             ))}
