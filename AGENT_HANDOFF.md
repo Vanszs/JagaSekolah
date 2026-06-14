@@ -32,6 +32,142 @@ metrik** (kalau tak ada datanya → tunda + tampilkan placeholder jujur).
 
 ---
 
+## 1.5 🎨 PLAN REDESIGN (Pencil `designs/dashboard-v2.pen`) — SUMBER KEBENARAN UI
+
+> Sesi 6 (TERBARU): seluruh halaman dashboard di-mock-up ulang di Pencil sebagai
+> **sumber kebenaran desain** sebelum diterapkan ke FE. Tujuan: tiap halaman tiap role
+> **padu (identik modern/rapi)** + **penuh tanpa gap kosong** di viewport 1440×900.
+
+### Gold standard (PATOKAN — semua halaman wajib mengikuti)
+**Dashboard Kepala Sekolah** (`F86t5`) = referensi emas. Anatomi WAJIB tiap halaman:
+1. **Sidebar** `w-220, bg-#F8FAFC`, `border-r #E2E8F0` → Brand (shield-check teal + "JagaSekolah")
+   + `NavGroup` (label "MENU"/grup, nav item `padding:[8,10] rounded-8`, aktif `fill #F0FDFA`+icon teal,
+   inaktif icon `#94A3B8`+teks `#475569`) + **Toggle Expand** (flex-spacer + `TogBtn 28×28` `chevrons-left`)
+   + **Footer absolute** `x:0,y:820` (avatar teal 28 + nama 12px + role 11px `#94A3B8`).
+2. **Topbar** `h-56, bg-white, border-b`, `justifyContent:space_between` → Breadcrumb kiri
+   (`bc1 #94A3B8` + chevron-right + `bc2 #0F172A w-500`) + TR kanan (Search pill + Bell + Avatar).
+   **Search pill** WAJIB: icon search + teks "Cari siswa…" + **`⌘K` kbd badge** (`bg-white border rounded-4`).
+3. **Body** `fill_container, padding:[22,24], gap:20, bg-#F8FAFC`:
+   - **PageHeader** (title 18 w-700 + desc 13 `#64748B`) ATAU **Greeting banner** (guru/bk: `bg-#F0FDFA border-#99F6E4`).
+   - **KPI Row** 4 kartu (`border-only rounded-8`), tiap kartu: label 12 + value 26 w-700 `tabular-nums`
+     + **delta badge inversi-makna** (Risiko↑=merah `#FEF2F2/#B91C1C`, Kehadiran↑=hijau `#F0FDF4`) + "vs …".
+   - **Chart Row** tinggi TETAP (dashboard 290, analitik 256): **stacked pill-bar** (merah `[16,16,0,0]` /
+     kuning / hijau `[0,0,16,16]`, 12 bulan) + **donut** (`innerRadius 0.6`, center total, legend val+%) —
+     atau bar/hbar untuk analitik.
+   - **Tabel** `height:fill_container` → mengisi sisa ruang ⇒ **NOL gap kosong**.
+
+> Kunci anti-gap: Body `fill_container` + Chart Row tinggi tetap + **elemen terakhir
+> (tabel/hbar) `height:fill_container`**. JANGAN panel tunggal `fill_container` (meregang → gap).
+
+### Status halaman Pencil (17 selesai — semua padu & full)
+| Role | Halaman | Node ID | Status |
+|------|---------|---------|--------|
+| Kepsek | Dashboard | `F86t5` | ✅ gold standard (existing) |
+| Kepsek | Collapsed Sidebar | `i7UzVP` | ✅ existing |
+| Kepsek | Daftar Siswa | `Yf1fx` | ✅ verified clean |
+| Kepsek | Detail Siswa | `IR7GL` | ✅ verified clean |
+| Guru | Dashboard | `c3hv8a` | ✅ rebuilt (greeting+KPI+chart+tabel) |
+| BK | Dashboard | `RXWwx` | ✅ rebuilt |
+| Dinas | Dashboard | `E5Zs9O` | ✅ rebuilt |
+| Dinas | Perbandingan Sekolah | `htrlb` | ✅ built |
+| Dinas | Laporan | `EK2dr` | ✅ built |
+| Superadmin | Dashboard | `QK1Sh` | ✅ rebuilt (sidebar 2-grup ANALITIK/PLATFORM) |
+| Superadmin | Admin Pengguna | `l2aSZN` | ✅ rebuilt |
+| Superadmin | Admin Audit Log | `y0PK5e` | ✅ rebuilt |
+| Shared | Akademik | `iV414` | ✅ built |
+| Shared | Kehadiran | `YwuXS` | ✅ built |
+| Shared | Intervensi | `A2Gchs` | ✅ built |
+| Shared | Analisis Risiko | `p2mz4` | ✅ built (lama `wJgId` dihapus) |
+| Lib | 🧩 Component Library | `mZa3b` | ✅ 26 reusable + Panel/Table card |
+
+### Konsistensi yang sudah diseragamkan sesi ini
+- **Search bar**: semua halaman baru kini punya teks "Cari siswa…" + `⌘K` kbd badge (sebelumnya "Cari…" tanpa badge → terlihat pendek).
+- **Toggle Expand button** ditambahkan ke 18 NavGroup (sebelumnya hanya Kepsek punya).
+- Semua card `rounded-lg`, `space-y/gap` konsisten, KPI delta inversi-makna benar.
+
+### ⚠️ SISA Pencil (belum di-mock-up)
+Admin Tenant, Admin Sinkronisasi, Admin Keamanan, Demografi, Putus Sekolah, Consent,
+Kelas, Kelola Users, Kelola Kelas, drill-down (Wilayah/Kabupaten/Sekolah/Kelas roster).
+Semua TINGGAL pakai builder yang sama (`sb`/`tb`/`kpiRow`/`stackBar`/`donutPanel`/`tableHead`/`hbarPanel`/`pill`).
+
+### ➡️ LANGKAH IMPLEMENTASI KE FE (Telah Selesai)
+Pencil = blueprint; FE React/TSX telah disinkronkan ke desain v2 ini.
+1. `DashboardShell` (sidebar + topbar) telah disesuaikan dgn gold standard: Toggle Expand, Search `⌘K`, Footer absolute.
+2. Tiap halaman analitik telah menerapkan Chart Row tinggi tetap + tabel/panel terakhir `flex-1` (anti-gap).
+3. Stacked area, horizontal bar, dll telah memakai warna & style brand v2.
+4. Lolos Pre-Delivery Slop Audit (§6) + react-doctor 100/100.
+
+### Gotcha Pencil `batch_design` (untuk sesi berikutnya)
+- Helper function (sb/tb/kpiRow/…) HARUS di-include ulang tiap `batch_design` (scope tidak persist).
+- `cornerRadius` array `[tl,tr,br,bl]` (BUKAN objek `{topLeft}`). `alignItems` hanya start/center/end (no stretch/baseline).
+- Anonymous array literal `.forEach` gagal → extract ke named var dulu.
+- Tak bisa `Update("varName")` — pakai node ID hasil return. Finalize `placeholder:false` di batch terpisah.
+- **Export PNG sering blank/pudar pada node yang BARU di-finalize** (glitch tool, bukan masalah desain).
+  Verifikasi struktur via `snapshot_layout` (cek bounds + `problemsOnly:true`); export ulang 1–2× biasanya muncul.
+
+---
+
+## 1.6 🛡️ PLAN ROBUSTNESS UI/UX (Pencil → FE) — roadmap berfase
+
+> Tujuan: desain tidak cuma "bagus saat data ideal", tapi **tahan banting** di semua
+> kondisi nyata (kosong/loading/error/overflow), semua viewport, dan semua alat bantu (a11y).
+> Patokan: `dashboards.md §10` (semua state) + `components.md` + `slop-code-patterns.md` (a11y).
+
+### FASE A — Lengkapi cakupan halaman Pencil (sisa 13)
+Pakai builder yang sama; satu role-set per batch. Urutan prioritas (paling sering dipakai dulu):
+1. **Superadmin**: Admin Tenant, Admin Sinkronisasi, Admin Keamanan, Demografi, Putus Sekolah.
+2. **Kepsek/BK**: Kelas, Kelola Users, Kelola Kelas, Consent.
+3. **Drill-down** (PII, superadmin/kepsek): Wilayah, Kabupaten, Sekolah, Kelas roster.
+Tiap halaman WAJIB lolos `snapshot_layout problemsOnly:true` = "No layout problems".
+
+### FASE B — State lengkap tiap surface (anti-"happy-path-only")
+Untuk SETIAP halaman, mock-up varian state (frame terpisah di Pencil, beri suffix nama):
+- **Empty** — ikon + judul + deskripsi + 1 CTA (mis. "Belum ada data siswa · Impor dari Dapodik").
+  Komponen sudah ada: `empty-state E7CrF`. Chart kosong → render axis + "Belum ada kejadian periode ini".
+- **Loading** — skeleton MIRROR bentuk (KPI 4 kotak abu, chart blok, tabel baris) — bukan spinner.
+  Komponen: `ChartSkeleton` (ui.tsx). Gate `motion-reduce:animate-none`.
+- **Error** — `role="alert"` ikon merah + "Gagal memuat" + tombol "Coba lagi" (outlined, non-agresif).
+- **Zero-but-present** — KPI = 0 tetap tampil (jangan sembunyikan); guard bagi-nol (`total>0?…:0`).
+- **Overflow/edge** — nama siswa 40 char (truncate + tooltip), angka 6 digit (`tabular-nums`, jangan wrap),
+  tabel 50+ baris (sticky header + pagination), badge teks panjang.
+
+### FASE C — Responsif (3 breakpoint, mock-up varian width)
+Sidebar collapse sudah ada (`i7UzVP`). Tambah varian utama per breakpoint:
+| Viewport | Sidebar | KPI grid | Chart Row | Tabel |
+|----------|---------|----------|-----------|-------|
+| ≥1280 desktop | full w-220 | 4-up | bar 2fr + donut 1fr | full |
+| 768–1024 tablet | rail w-60 (icon) | 2×2 | stack vertikal | scroll-x |
+| <768 mobile | off-canvas drawer | 1-kolom | stack, donut di bawah | card-list / scroll-x |
+Aturan: `dvh` bukan `vh`; mobile CTA full-width thumb-zone; chart `min-w` + `overflow-x-auto`.
+
+### FASE D — Aksesibilitas (WAJIB, bukan opsional — lihat slop-code-patterns A11Y1–23)
+- Semua interaktif `<button>`/`<a>` + `focus-visible:ring-2 ring-teal-600` (bukan `<div onClick>`).
+- Chart `role="img"` + `aria-label` insight (bukan "a chart"); sediakan sr-only `<table>` alternatif.
+- Kontras AA: body ≥`#334155`, jangan `text-gray-400` pada putih. Badge risiko: warna + LABEL TEKS (bukan warna saja).
+- `prefers-reduced-motion` gate tiap animasi spasial. `tabular-nums` semua angka. `<html lang="id">`.
+- Tabel data = `<table>`+`<th scope>`+`aria-sort`. Form = label + error(`aria-invalid`+`aria-describedby`).
+- Modal/drawer = `<dialog>` (focus-trap + Esc bawaan). Toast = `aria-live`.
+
+### FASE E — Sinkronisasi Pencil → FE (implementasi nyata)
+Urutan agar perubahan terukur & tak meledak:
+1. **DashboardShell dulu** (dampak global): sidebar (Toggle Expand, footer absolute),
+   topbar (breadcrumb + Search `⌘K`). Verifikasi 1 halaman, baru lanjut.
+2. **Komponen chart**: pastikan stacked pill-bar (radius 16) + donut center-total dipakai konsisten
+   (sudah ada `CategoryStackedBars`/`RiskDonutChart` — samakan ke mock-up).
+3. **Per halaman**: terapkan grid anti-gap (Body flex-col + Chart Row tinggi tetap + panel akhir `flex-1`).
+4. **Tiap commit**: tsc clean · test (≥483) · **react-doctor 100/100** · Pre-Delivery Slop Audit (§6).
+5. Crosscheck visual (export Pencil vs screenshot FE) sebelum tandai selesai.
+
+### Definition of Done (per halaman — robust)
+- [ ] `snapshot_layout problemsOnly:true` → kosong (no clip/overflow/gap).
+- [ ] 4 state ada (empty/loading/error/zero) — minimal di FE, ideal juga di Pencil.
+- [ ] Responsif 3 breakpoint tidak putus / tak ada scroll horizontal tak sengaja di mobile.
+- [ ] A11y: keyboard-reachable, focus terlihat, chart aria-label, kontras AA, reduced-motion.
+- [ ] Padu dengan gold standard (sidebar/topbar/KPI/chart/tabel identik gaya).
+- [ ] react-doctor 100/100 + tsc + test hijau.
+
+---
+
 ## 2. Yang DIKERJAKAN (kronologis)
 
 Semua di branch `master` (lokal, **belum di-push** — push bila user minta).
@@ -83,6 +219,12 @@ browser dinas/superadmin terkonfirmasi (breadcrumb, chart batang render, scope w
 | `recompute/route.ts` | Opt-in `ML_SERVICE_URL`: OFF → jalur rule murni identik; ON → blend per siswa via `mapWithConcurrency(8)`, embed `ml` info + alasan transparan di `alasanJson`, `sumber` ikut blend. Return `{dihitung,sumber}`. |
 | `ml-service/` | Python FastAPI: `dataset.py` (generator ARKETIPE berkorelasi — 9 arketipe realistis + label laten berbobot literatur ABC, prevalensi ~15%, batasan koherensi antar-fitur), `schema.py` (Pydantic, cermin TS), `train.py` (LogReg+StandardScaler+balanced, split 25% test, lapor ROC-AUC≈0.97/PR-AUC≈0.88/Recall≈0.92 → `model.joblib` versi synthetic-0.2.0), `app.py` (`/health`+`/predict`, auto-train bila model absen), Dockerfile (train saat build + healthcheck), requirements pinned, README. compose `--profile ml` port 8000. |
 | tests | `mlClient.test.ts` (8) + `mlPredict.test.ts` (12) = +20 → **483 test**. Breaker/timeout/retry/Zod-reject/fallback/escalate-only/sumber, semua via port disuntik (tanpa network). |
+
+**Sesi 6 (TERBARU) — Sinkronisasi Dashboard ke Pencil v2 Blueprint:**
+- **DashboardShell**: Implementasi status sidebar `collapsed` di local storage, visual toggle button dengan transition width, search pill dengan kbd `⌘K` badge, notifikasi Bell.
+- **TopBreadcrumb**: Navigasi global berbasis pathname dengan penyesuaian label role.
+- **Dinas / Kepsek / Guru / BK Dashboard**: Grid layout 1440x900 anti-gap dengan tinggi grafik/kartu tetap, panel card `rounded-lg`, table container `flex-1` / `height:fill_container`, serta integrasi visual design v2.
+- **react-doctor & Tests**: Menjaga skor react-doctor tetap 100/100, 483 unit test lulus.
 
 **Verified sesi 5:** tsc clean · **483 test / 0 fail** · build OK · react-doctor 100/100 ·
 Python `py_compile` OK. doctor.config: 2 `async-await-in-loop` ML (retry sekuensial +
