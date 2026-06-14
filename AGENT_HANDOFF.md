@@ -59,27 +59,54 @@ unit test 43→274, fix `configVersion`, authCore extract + phantom-ui skeleton.
 **Verified sesi 3:** tsc clean · 340 test · build OK (19 hal) · react-doctor 100/100 ·
 browser superadmin Analisis Risiko (KPI+histogram+faktor real data, 0 console error).
 
+**Sesi 4 (TERBARU) — dinas berjenjang, Indonesia lengkap, breadcrumb, chart indah:**
+| Commit | Isi |
+|--------|-----|
+| `81985b9` | **maximize admin pages** — tenant/users/audit/security: charts + KPI kaya + SortableTable (analytics: platformByProvinsi/schoolRiskRows/auditActivityTrend/auditByAksi/usersByRole/consentBySekolah). |
+| `aa8af9b`+`ebd8995` | **unit tests** RBAC + analytics kernels + nav dead-link guard + scoring lapangan Indonesia (340→436). Ekstrak kernel murni: `authorizeResolvedSiswa`, `analyticsKernels.ts`, `analyticsBuckets.ts`. |
+| `6410b27`+`d9534ce` | **data wilayah Indonesia NYATA `src/lib/seed/regions.ts`** — kini **38 provinsi LENGKAP** (Aceh→Papua Barat Daya, incl 4 pemekaran Papua 2022), 77 kabupaten/sekolah (30 3T), NPSN 8-digit sistematis unik. Seed buat semua wilayah; demo anchor SMP N 1 Surabaya + Wamena. |
+| `ecfa5de` | **breadcrumb global** `TopBreadcrumb` di atas main content (DashboardShell) + **dinas elevated** (mirror analitik superadmin, tanpa root). |
+| `d86ca1b` | **DINAS 3 TINGKAT** pusat/provinsi/kabupaten — migration `User.provinsi`; `dinasLevel(ctx)`; siswaScope/analyticsScope per-jenjang; `assertDinasWilayah`; seed 3 akun dinas. |
+| `84098fe` | **fix gap dinas-level** (audit POV 6 sub-agent): P0 kebocoran drill provinsi (dinas-kabupaten bisa lihat provinsi lain), 3 halaman analitik superadmin-only→izinkan dinas scoped, Perbandingan/Laporan pakai `riskBySekolahScoped`/`dinasSekolahWhere`, create-user dukung tingkat dinas. |
+| `4205aec`+`07fe11c` | **chart modern clean** (gradient area, smooth curve, hover-dot, custom tooltip card, donut rounded, dashed grid) + **FIX BUG batang kosong** (hidden numeric axis → `domain={[0,"dataMax"]}`). |
+| `117a463` | **steering** `references/charts.md` (riset 10 sub-agent) + registrasi SKILL.md. |
+
+**Verified sesi 4:** tsc clean · **463 test / 0 fail** · build OK (19 hal) · react-doctor 100/100 ·
+browser dinas/superadmin terkonfirmasi (breadcrumb, chart batang render, scope wilayah).
+
 ---
 
 ## 3. STATUS SAAT INI
 
-- **Working tree CLEAN.** tsc bersih · **340 test / 0 fail** · build OK · react-doctor 100/100.
+- **Working tree CLEAN.** tsc bersih · **463 test / 0 fail** · build OK · react-doctor 100/100.
 - **Sidebar final per role**: superadmin 12 (3-grup ANALITIK/PLATFORM/KEAMANAN),
-  dinas 6, kepsek 8 (2-grup SEKOLAH/KELOLA), guru 5, bk 6. Semua route punya halaman
-  nyata (no dead link).
-- Dashboard maksimal: tiap menu berisi penuh (KPI + multi-chart + tabel sortable).
-  Akademik (model Nilai), Demografi (gender/KIP/jarak), Putus Sekolah — dimensi data
-  yang sebelumnya tak terpakai kini divisualisasikan (REAL).
+  **dinas 10** (analitik mirror superadmin + Telusur Siswa + Perbandingan + Laporan, TANPA root),
+  kepsek 8 (2-grup SEKOLAH/KELOLA), guru 5, bk 6. Semua route punya halaman nyata (no dead link).
+- **Breadcrumb global** `TopBreadcrumb` di atas main content tiap halaman dashboard
+  (path-derived, label per-role); halaman drill-down (wilayah/kabupaten/sekolah/kelas/siswa)
+  pakai breadcrumb kaya-nama sendiri (TopBreadcrumb diam di rute itu agar tak ganda).
+- **DINAS 3 TINGKAT** (lihat §4 RBAC): pusat (nasional) / provinsi / kabupaten — bisa
+  telusur sampai identitas siswa DALAM cakupannya; root (admin/*) tetap superadmin-only.
+- **Data wilayah = 38 provinsi Indonesia ASLI** lengkap (77 sekolah, 30 3T) di
+  `src/lib/seed/regions.ts`. Demo: 2 sekolah berdata (Surabaya urban + Wamena 3T).
+- **Chart sudah modern-clean** (gradient, smooth, custom tooltip, anti-slop). Standar lengkap
+  di `.kiro/steering/component-reference-design/references/charts.md`.
+
+### ⚠️ PRIVACY (keputusan owner, sadar)
+Dinas (semua tingkat) KINI BISA melihat identitas siswa DALAM cakupannya (aturan lama
+"dinas agregat-anonim" sengaja dilonggarkan atas permintaan owner). Lintas-wilayah/provinsi
++ root tetap diblok. Implikasi UU PDP dipegang owner produk.
 
 ### ⚠️ SISA / belum dikerjakan
 1. **DEFERRED (butuh endpoint PATCH baru, bukan dead-link)**: tenant create/edit form
    (POST /api/admin/sekolah ada, belum ada UI form+GET-edit), user aktif/nonaktif+revoke
    (perlu PATCH /api/admin/users/[id] dgn aktif/tokenVersion — belum ada), import upload UI
-   (POST /api/import ada, baru pointer). Tidak ada dead-link krn bukan item sidebar terpisah.
+   (POST /api/import ada, baru pointer).
 2. **NEEDS-DATA (JANGAN bangun)**: funnel/outcome/success-rate intervensi, jadwal konseling,
    rujukan, geo-heatmap (tak ada lat/lng), alert-threshold, announcement, last-login.
-3. `/dashboard/agregat` lama masih di disk (tak ada di nav lagi; harmless, bisa dihapus).
-4. **Belum `git push`**.
+3. `agregatScope` lama masih 1-level (dipakai route orphan `/dashboard/agregat` + api non-nav);
+   role dashboards & drill pakai `analyticsScope`/`dinasSekolahWhere` yang sudah 3-level.
+4. **Belum `git push`** — banyak commit menumpuk lintas sesi di `master` lokal.
 
 ---
 
@@ -99,10 +126,18 @@ browser superadmin Analisis Risiko (KPI+histogram+faktor real data, 0 console er
     /login tiap pindah halaman**. JANGAN pakai `auth` (penuh) di middleware lagi.
 - Gate `/dashboard` ada di **layout server** (`requireDashboardContext`) + middleware
   (authEdge) sebagai lapis tambahan. API self-gate via `requireContext()`.
-- **RBAC helpers** (`src/lib/rbac.ts`): `siswaScope` (dinas→403), `agregatScope`
-  (dinas/superadmin), `resolveSiswa` (IDOR-safe; superadmin lolos), `requireRole`,
-  `assertSameSekolah`, **`creatableRoles`/`canCreateUser`/`canManageUsers`** (sumber
-  tunggal: superadmin→semua, kepsek→guru/bk, lainnya→none; tak ada yg bisa buat superadmin).
+- **RBAC helpers** (`src/lib/rbac.ts`): `siswaScope` (dinas KINI 3-level, bukan 403 — lihat
+  bawah), `agregatScope` (legacy 1-level, orphan route saja), `resolveSiswa`/`authorizeResolvedSiswa`
+  (IDOR-safe kernel murni; dinas per-jenjang), `requireRole`, `assertSameSekolah`,
+  **`assertDinasWilayah(ctx,{wilayahId,provinsi})`** (cegah dinas lintas wilayah/provinsi),
+  **`creatableRoles`/`canCreateUser`/`canManageUsers`** (superadmin→semua, kepsek→guru/bk).
+- **DINAS BERJENJANG** (`dinasLevel(ctx)`): `wilayahId` terisi → **kabupaten**; `provinsi`
+  terisi (wilayahId null) → **provinsi**; keduanya null → **pusat** (nasional). Field di User:
+  `wilayahId`, `provinsi` (migration `dinas_provinsi_level`). siswaScope/analyticsScope:
+  pusat `{}` · provinsi `{sekolah:{wilayah:{provinsi}}}` · kabupaten `{sekolah:{wilayahId}}`.
+  `analyticsScope` (`src/lib/dashboardScope.ts`) sudah 3-level; pakai INI bukan agregatScope.
+  Perbandingan/Laporan pakai `dinasSekolahWhere(ctx)` + `riskBySekolahScoped(where)`.
+  Akun demo: dinaspusat@/dinasprov@/dinas@demo.test (pwd dinas123).
 - `requireDashboardContext()` (`src/lib/session.ts`) → redirect /login saat 401
   (redirect DI LUAR try/catch — kalau di dalam akan tertelan). `requireContext()` lempar 401 utk API.
 - Role: `superadmin | dinas | kepsek | guru | bk`.
@@ -126,7 +161,8 @@ browser superadmin Analisis Risiko (KPI+histogram+faktor real data, 0 console er
   (visibilitas nav, BUKAN gerbang otorisasi), roleLabel.
 
 ### Charts & analytics — sesi 2
-- **Recharts 2.15.4** (pinned). Client di `src/components/charts/recharts/`: RiskTrendLine,
+- **Recharts 3.8.1** (upgraded sesi 4; `theme.ts`→`theme.tsx` krn berisi JSX ChartTooltip).
+  Client di `src/components/charts/recharts/`: RiskTrendLine,
   RiskDonutChart, FactorBars, CategoryStackedBars, Bars(CategoryBars), SingleAreaChart,
   theme.ts (warna brand+risiko, usePrefersReducedMotion via useSyncExternalStore, tooltipStyle).
   SEMUA `'use client'` + role=img+aria-label + animasi gated reduced-motion. (Server-SVG lama dihapus.)
@@ -203,12 +239,12 @@ browser superadmin Analisis Risiko (KPI+histogram+faktor real data, 0 console er
 - Import modul via alias `@/` (→ `src/`).
 - **TANPA Prisma/DB/network di unit test** — pakai pure function + dependency injection
   (lihat pola `tests/authCore.test.ts` ports, `tests/applySync.test.ts` SyncPort).
-- Saat ini **444 test / 0 fail**. File test: authCore, api, rules, rules-scenarios,
+- Saat ini **463 test / 0 fail**. File test: authCore, api, rules, rules-scenarios,
   features, buildInput, explain, thresholds, columnMap, parse, nav, rateLimit, rbac,
-  cleaning, envelope, applySync, analyticsBuckets, rbacScenarios (53: scope/IDOR/
-  creatableRoles per 5 role), analyticsKernels (21: agregasi+div-by-zero guard),
+  cleaning, envelope, applySync, analyticsBuckets, rbacScenarios (scope/IDOR/
+  creatableRoles per 5 role + dinas 3-level), analyticsKernels (agregasi+div-by-zero guard),
   navIntegrity (dead-link guard vs page.tsx on disk), scoringField (skenario lapangan
-  3T/musiman/bencana Indonesia), seedRegions (validasi data wilayah nyata).
+  3T/musiman/bencana Indonesia), seedRegions (38 provinsi nyata), dinasLevel (3 jenjang).
   (crypto.test.ts DIHAPUS.)
 - **Kernel murni testable** (tanpa DB): `src/lib/resolveSiswa.ts` → `authorizeResolvedSiswa`;
   `src/lib/analyticsKernels.ts` → transformPlatformByProvinsi/UsersByRole/ConsentBySekolah/
