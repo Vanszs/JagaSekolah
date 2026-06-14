@@ -31,7 +31,7 @@ export function HorizontalBarChart({
       <ResponsiveContainer width="100%" height={h}>
         <BarChart data={data} layout="vertical" margin={{ top: 4, right: 36, bottom: 4, left: 8 }} barCategoryGap="28%">
           <CartesianGrid stroke={CHART.grid} strokeDasharray="4 4" horizontal={false} />
-          <XAxis type="number" {...axisProps} allowDecimals={false} unit={unit} hide />
+          <XAxis type="number" {...axisProps} allowDecimals={false} unit={unit} domain={[0, "dataMax"]} hide />
           <YAxis type="category" dataKey="label" tick={{ fill: CHART.label, fontSize: 12 }} axisLine={false} tickLine={false} width={140} />
           <Tooltip content={<ChartTooltip unit={unit} />} cursor={{ fill: "rgba(0,93,76,0.05)" }} />
           <Bar dataKey="value" name={seriesName} radius={[0, 6, 6, 0]} isAnimationActive={!reduced} animationDuration={ANIM_MS} barSize={20}>

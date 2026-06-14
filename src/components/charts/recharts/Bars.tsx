@@ -18,7 +18,7 @@ export function CategoryBars({ data, seriesName }: { data: CatBarDatum[]; series
       <ResponsiveContainer width="100%" height={h}>
         <BarChart data={data} layout="vertical" margin={{ top: 4, right: 36, bottom: 4, left: 8 }} barCategoryGap="28%">
           <CartesianGrid stroke={CHART.grid} strokeDasharray="4 4" horizontal={false} />
-          <XAxis type="number" allowDecimals={false} hide />
+          <XAxis type="number" allowDecimals={false} domain={[0, "dataMax"]} hide />
           <YAxis type="category" dataKey="label" tick={{ fill: CHART.label, fontSize: 12 }} axisLine={false} tickLine={false} width={140} />
           <Tooltip content={<ChartTooltip />} cursor={{ fill: "rgba(0,93,76,0.05)" }} />
           <Bar dataKey="value" name={seriesName} fill={CHART.brand} radius={[0, 6, 6, 0]} isAnimationActive={!reduced} animationDuration={ANIM_MS} barSize={20}>
