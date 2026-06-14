@@ -51,7 +51,7 @@ async function StatusStrip() {
     { icon: ShieldCheck, label: "Persetujuan PDP", value: `${consentPct}% siswa`, ok: consentPct >= 50 },
   ];
   return (
-    <section aria-label="Status sistem" className="rounded-xl border border-slate-200 bg-white">
+    <section aria-label="Status sistem" className="rounded-lg border border-slate-200 bg-white">
       <div className="grid divide-y divide-slate-100 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
         {items.map((s) => {
           const Icon = s.icon;
@@ -100,7 +100,7 @@ async function SystemActivity() {
     select: { id: true, aksi: true, timestamp: true, user: { select: { nama: true } } },
   });
   return (
-    <section className="rounded-xl border border-slate-200 bg-white p-6">
+    <section className="rounded-lg border border-slate-200 bg-white p-6">
       <div className="flex items-center justify-between">
         <h3 className="flex items-center gap-2 font-display text-base font-semibold text-[#0F172A]">
           <Activity className="h-4 w-4 text-[#005D4C]" aria-hidden="true" />
@@ -147,7 +147,7 @@ function ManagementShortcuts() {
           <Link
             key={c.href}
             href={c.href}
-            className="group rounded-xl border border-slate-200 bg-white p-5 transition-colors hover:border-[#005D4C]/40 focus-visible:ring-2 focus-visible:ring-[#005D4C] focus-visible:ring-offset-2"
+            className="group rounded-lg border border-slate-200 bg-white p-5 transition-colors hover:border-[#005D4C]/40 focus-visible:ring-2 focus-visible:ring-[#005D4C] focus-visible:ring-offset-2"
           >
             <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#005D4C]/10 text-[#005D4C]">
               <Icon className="h-[18px] w-[18px]" aria-hidden="true" />
@@ -162,20 +162,20 @@ function ManagementShortcuts() {
 }
 
 function StatusStripSkeleton() {
-  return <div className="h-20 w-full animate-pulse rounded-xl bg-slate-100 motion-reduce:animate-none" />;
+  return <div className="h-20 w-full animate-pulse rounded-lg bg-slate-100 motion-reduce:animate-none" />;
 }
 function StatGridSkeleton({ count }: { count: number }) {
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
       {Array.from({ length: count }).map((_, i) => (
-        <div key={i} className="h-20 animate-pulse rounded-xl bg-slate-100 motion-reduce:animate-none" />
+        <div key={i} className="h-20 animate-pulse rounded-lg bg-slate-100 motion-reduce:animate-none" />
       ))}
     </div>
   );
 }
 function CardSkeleton({ title, lines }: { title: string; lines: number }) {
   return (
-    <section className="rounded-xl border border-slate-200 bg-white p-6">
+    <section className="rounded-lg border border-slate-200 bg-white p-6">
       <h3 className="font-display text-base font-semibold text-slate-300">{title}</h3>
       <div className="mt-5 space-y-3">
         {Array.from({ length: lines }).map((_, i) => (

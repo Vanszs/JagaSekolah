@@ -10,7 +10,7 @@ import {
   interventionByJenis,
   interventionTrend,
 } from "@/lib/analytics";
-import { PageHeader, StatTile } from "@/components/dashboard/ui";
+import { PageHeader, StatTile, Panel, ChartSkeleton } from "@/components/dashboard/ui";
 import { RegionTable } from "@/components/dashboard/RegionTable";
 import { RiskTrendLine } from "@/components/charts/recharts/RiskTrendLine";
 import { RiskDonutChart } from "@/components/charts/recharts/RiskDonutChart";
@@ -29,7 +29,7 @@ import { CHART } from "@/components/charts/recharts/theme";
  */
 export default function NationalOverview() {
   return (
-    <div className="space-y-10">
+    <div className="space-y-8">
       <PageHeader
         title="Dashboard Nasional"
         desc="Statistik agregat sistem peringatan dini putus sekolah secara nasional. Telusuri wilayah untuk melihat detail hingga tingkat siswa."
@@ -94,18 +94,6 @@ export default function NationalOverview() {
 
       <DeferredNotice />
     </div>
-  );
-}
-
-function Panel({ title, desc, children }: { title: string; desc?: string; children: React.ReactNode }) {
-  return (
-    <section className="rounded-xl border border-slate-200 bg-white p-6">
-      <div className="mb-5">
-        <h2 className="font-display text-base font-semibold text-[#0F172A]">{title}</h2>
-        {desc && <p className="mt-0.5 text-sm text-slate-500">{desc}</p>}
-      </div>
-      {children}
-    </section>
   );
 }
 
@@ -184,7 +172,7 @@ async function TopProvinceSection() {
 
 function DeferredNotice() {
   return (
-    <section className="rounded-xl border border-dashed border-slate-300 bg-slate-50/60 p-6">
+    <section className="rounded-lg border border-dashed border-slate-300 bg-slate-50/60 p-6">
       <div className="flex items-start gap-3">
         <Info className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" aria-hidden="true" />
         <div className="text-sm">
@@ -206,13 +194,10 @@ function KpiSkeleton() {
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
       {[0, 1, 2, 3].map((i) => (
-        <div key={i} className="h-24 animate-pulse rounded-xl bg-slate-100 motion-reduce:animate-none" />
+        <div key={i} className="h-24 animate-pulse rounded-lg bg-slate-100 motion-reduce:animate-none" />
       ))}
     </div>
   );
-}
-function ChartSkeleton({ h }: { h: number }) {
-  return <div className="w-full animate-pulse rounded-lg bg-slate-100 motion-reduce:animate-none" style={{ height: h }} />;
 }
 function TableSkeleton() {
   return (

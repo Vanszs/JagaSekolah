@@ -33,7 +33,7 @@ export default function DinasDashboard({
   scope: Prisma.SiswaWhereInput;
 }) {
   return (
-    <div className="space-y-10">
+    <div className="space-y-8">
       <PageHeader title="Dashboard Wilayah" desc={`Statistik risiko anonim seluruh sekolah di ${regionLabel}. Identitas siswa tetap di tangan sekolah.`} />
 
       <Suspense fallback={<KpiSkeleton />}>
@@ -87,7 +87,7 @@ export default function DinasDashboard({
 
 function Panel({ title, desc, children }: { title: string; desc?: string; children: React.ReactNode }) {
   return (
-    <section className="rounded-xl border border-slate-200 bg-white p-6">
+    <section className="rounded-lg border border-slate-200 bg-white p-6">
       <div className="mb-5">
         <h2 className="font-display text-base font-semibold text-[#0F172A]">{title}</h2>
         {desc && <p className="mt-0.5 text-sm text-slate-500">{desc}</p>}
@@ -149,7 +149,7 @@ async function SchoolTable({ sekolahWhere }: { sekolahWhere: Prisma.SekolahWhere
 }
 
 function KpiSkeleton() {
-  return <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{[0, 1, 2, 3].map((i) => <div key={i} className="h-24 animate-pulse rounded-xl bg-slate-100 motion-reduce:animate-none" />)}</div>;
+  return <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{[0, 1, 2, 3].map((i) => <div key={i} className="h-24 animate-pulse rounded-lg bg-slate-100 motion-reduce:animate-none" />)}</div>;
 }
 function ChartSkeleton({ h }: { h: number }) {
   return <div className="w-full animate-pulse rounded-lg bg-slate-100 motion-reduce:animate-none" style={{ height: h }} />;

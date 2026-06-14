@@ -110,7 +110,7 @@ export function IntervensiManager({
   }
 
   return (
-    <section className="mt-5 rounded-xl border border-slate-200 bg-white p-5">
+    <section className="mt-5 rounded-lg border border-slate-200 bg-white p-5">
       <div className="flex items-center justify-between">
         <h2 className="flex items-center gap-2 font-display text-base font-semibold text-[#0F172A]">
           <HeartHandshake className="h-4 w-4 text-slate-400" aria-hidden="true" />

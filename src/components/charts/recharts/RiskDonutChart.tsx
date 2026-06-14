@@ -56,8 +56,8 @@ export function RiskDonutChart({ data }: { data: DonutDatum[] }) {
             isAnimationActive={!reduced}
             animationDuration={ANIM_MS}
           >
-            {withTotal.map((d) => (
-              <Cell key={d.key} fill={COLOR[d.key]} />
+            {withTotal.map((d, i) => (
+              <Cell key={`${d.key}-${i}`} fill={COLOR[d.key]} />
             ))}
           </Pie>
           <Tooltip content={<DonutTip />} />

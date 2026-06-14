@@ -103,7 +103,7 @@ export default async function GuruBKDashboard({ role, scope }: { role: Role; sco
 
 function Panel({ title, desc, children }: { title: string; desc?: string; children: React.ReactNode }) {
   return (
-    <section className="rounded-xl border border-slate-200 bg-white p-6">
+    <section className="rounded-lg border border-slate-200 bg-white p-6">
       <div className="mb-5">
         <h2 className="font-display text-base font-semibold text-[#0F172A]">{title}</h2>
         {desc && <p className="mt-0.5 text-sm text-slate-500">{desc}</p>}
@@ -158,7 +158,7 @@ async function PriorityList({ scope }: { scope: Prisma.SiswaWhereInput }) {
     return <EmptyState icon={<Users className="h-6 w-6" aria-hidden="true" />} title="Belum ada siswa berisiko" desc="Semua siswa berstatus aman, atau data risiko belum dihitung." />;
   }
   return (
-    <ul className="divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200 bg-white">
+    <ul className="divide-y divide-slate-100 overflow-hidden rounded-lg border border-slate-200 bg-white">
       {rows.map((r) => (
         <li key={r.id}>
           <Link href={`/dashboard/siswa/${r.id}`} className="flex items-center gap-4 px-4 py-3.5 transition-colors hover:bg-slate-50">

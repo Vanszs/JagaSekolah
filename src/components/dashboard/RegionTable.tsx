@@ -22,7 +22,7 @@ export function RegionTable({
     return <p className="text-sm text-slate-500">Belum ada data.</p>;
   }
   return (
-    <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+    <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
       <div className="overflow-x-auto">
         <table className="min-w-full text-sm">
           <thead className="border-b border-slate-100 text-[11px] uppercase tracking-wide text-slate-400">
