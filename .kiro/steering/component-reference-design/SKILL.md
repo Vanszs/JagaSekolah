@@ -19,6 +19,7 @@ metadata:
     - references/components.md
     - references/animation.md
     - references/design-systems.md
+    - references/charts.md
 ---
 
 # Component Reference Design — Positive Pattern Library
@@ -49,6 +50,7 @@ component variant, and tasteful accessible motion — all copy-pasteable and a11
 | Card, button, form, nav, table, list, badge | `references/components.md` | Card variants (17), buttons (10), form controls (13), navigation (13), data-display (16) |
 | Modal, drawer, toast, tooltip, popover, animation | `references/animation.md` | Overlay/feedback components + tasteful motion patterns (timing, easing, reduced-motion, 13 motion recipes) |
 | Choosing a library / design tokens | `references/design-systems.md` | 18 design-system index (ecosystem, styling, a11y, theming, license, URL) + W3C DTCG tokens + decision matrix |
+| Charts, graphs, KPI cards, sparklines, data-viz | `references/charts.md` | Beautiful modern Recharts patterns: color systems (teal/Okabe-Ito/OKLCH), premium chrome (custom tooltip/legend/axes/grid), bar/line/area/donut/radial, KPI+sparkline cards, specialty (heatmap/treemap/funnel/radar/scatter/bullet/waffle), motion, dark-mode/responsive, a11y, 15-point anti-slop scan |
 
 ## The Anti-Monotony Rules (apply to every multi-section page)
 1. **Never repeat the same section anatomy consecutively.** Vary: centered → split → bento → stats-bar → full-bleed → alternating.

@@ -1,8 +1,5 @@
 # AGENT HANDOFF — JagaSekolah
 
-> Catatan progres untuk AI agent berikutnya. Diperbarui 2026-06-14 (sesi 3).
-> Baca ini dulu sebelum bekerja. Konteks proyek lengkap ada di `PLAN.md`,
-> `ARCHITECTURE.md`, `DEPLOY.md`. Ringkasan produk di `README.md`.
 
 > ## 🚨 ATURAN #1 (baca dulu, tidak bisa ditawar)
 > Sebelum menyentuh UI apa pun (buat/ubah/review), kamu WAJIB membaca & mematuhi dua skill:
