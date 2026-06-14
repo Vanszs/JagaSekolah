@@ -5,9 +5,42 @@ oleh app Next.js via HTTP. **Opsional**: bila `ML_SERVICE_URL` tidak diset, app 
 penuh dengan rule-based saja. Bila service mati/lambat/error, app **otomatis fallback**
 ke rule-based — ML tidak pernah merusak MVP.
 
-> ⚠️ **Model dilatih pada data SINTETIS** (hubungan literatur ABC), bukan data siswa nyata.
+> ⚠️ **Model dilatih pada data SINTETIS** (lihat "Dataset" di bawah), bukan data siswa nyata.
 > Sebelum produksi WAJIB dilatih ulang + dikalibrasi pada data retrospektif sekolah mitra
 > (validasi + confusion matrix). Lihat `PLAN.md`.
+
+## Dataset (`dataset.py`)
+
+Dibangun **berbasis arketipe**, bukan sampling acak independen — agar fitur **berkorelasi
+realistis** (sinyal risiko mengelompok; konteks ekonomi/jarak/keluarga sebagai *amplifier*,
+bukan penyebab tunggal). 9 arketipe berbobot populasi:
+
+| Arketipe | Porsi | Ciri |
+|---|---|---|
+| stabil_aman | 30% | hadir baik, nilai cukup |
+| ekonomi_tekun | 12% | rentan ekonomi/jarak TAPI tekun (konteks ≠ risiko otomatis) |
+| early_absence | 12% | tren absensi mulai memburuk (peringatan dini) |
+| disengage_akademik | 10% | nilai jatuh + tugas tak terkumpul |
+| krisis_absensi | 10% | absen kronis (prediktor terkuat) |
+| multifaktor | 8% | ABC+D bertumpuk (risiko tertinggi) |
+| tiga_T | 8% | akses sulit, absen musiman (panen) |
+| perilaku | 6% | disiplin/partisipasi bermasalah |
+| eks_tinggal_kelas_membaik | 4% | riwayat tinggal kelas, kini membaik |
+
+Label dropout = fungsi **laten berbobot literatur ABC** (Attendance terkuat → Course →
+Behavior → konteks + interaksi), + batasan koherensi antar-fitur. Prevalensi disetel
+**~15%** (dropout = kejadian minoritas).
+
+**Metrik held-out (test 25%, data sintetis — indikatif, bukan klaim produksi):**
+ROC-AUC ≈ 0.97 · PR-AUC ≈ 0.88 · **Recall ≈ 0.92** (sengaja diprioritaskan: jangan
+lewatkan anak berisiko) · Precision ≈ 0.69. Bobot fitur teratas: pctAbsen, alpaBeruntun,
+trenAbsensiMemburuk — sejalan literatur.
+
+## Model
+
+`train.py` melatih **Logistic Regression** (Pipeline: `StandardScaler` +
+`class_weight="balanced"`) — dipilih karena **transparan/explainable** (sesuai prinsip
+JagaSekolah), bukan kotak hitam. Versi: `synthetic-0.2.0`.
 
 ## Kontrak
 

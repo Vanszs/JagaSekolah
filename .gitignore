@@ -20,7 +20,9 @@ coverage/
 # python ml-service
 ml-service/__pycache__/
 ml-service/*.pkl
+ml-service/*.joblib
 ml-service/.venv/
+ml-service/venv/
 # typescript incremental
 *.tsbuildinfo
 

@@ -7,24 +7,15 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field, field_validator
 
-FEATURE_VERSION = "1.0.0"
+from dataset import FEATURE_ORDER, FEATURE_VERSION  # sumber kebenaran kontrak fitur
 
-# Urutan kolom fitur — HARUS konsisten dengan train.py saat membentuk vektor model.
-FEATURE_ORDER: list[str] = [
-    "pctAbsen",
-    "alpaBeruntun",
-    "trenAbsensiMemburuk",
-    "telatKronis",
-    "catatanDisiplin",
-    "partisipasiRendah",
-    "pctTugasTidakKumpul",
-    "nilaiTurun",
-    "mapelDiBawahKkm",
-    "pernahTinggalKelas",
-    "nilaiIntiRendah",
-    "faktorEkonomi",
-    "jarakJauh",
-    "keluargaRentan",
+__all__ = [
+    "FEATURE_ORDER",
+    "FEATURE_VERSION",
+    "Features",
+    "PredictRequest",
+    "PredictResponse",
+    "HealthResponse",
 ]
 
 
