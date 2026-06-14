@@ -1,12 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, CalendarX, GraduationCap, Lightbulb, TriangleAlert } from "lucide-react";
+import { ArrowLeft, Lightbulb, TriangleAlert } from "lucide-react";
 import type { AbsensiStatus } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { requireDashboardContext } from "@/lib/session";
 import { resolveSiswa } from "@/lib/resolveSiswa";
 import { AuthError } from "@/lib/rbac";
-import { RiskBadge, EmptyState } from "@/components/dashboard/ui";
+import { RiskBadge, EmptyState, Panel } from "@/components/dashboard/ui";
 import { IntervensiManager } from "@/components/dashboard/IntervensiManager";
 import { ConsentManager } from "@/components/dashboard/ConsentManager";
 import { parseAlasan } from "@/lib/parseAlasan";
@@ -113,14 +113,9 @@ export default async function SiswaDetailPage({ params }: { params: Promise<{ id
         </div>
       ) : (
         <div className="mt-6 grid gap-5 lg:grid-cols-2">
-          {/* Alasan — transparansi */}
-          <section className="rounded-lg border border-slate-200 bg-white p-5">
-            <h2 className="flex items-center gap-2 font-display text-base font-semibold text-[#0F172A]">
-              <TriangleAlert className="h-4 w-4 text-[#005D4C]" aria-hidden="true" />
-              Mengapa ditandai begini
-            </h2>
+          <Panel title="Mengapa ditandai begini" className="[&>div:first-child]:flex [&>div:first-child]:items-center [&>div:first-child]:gap-2">
             {alasan.length > 0 ? (
-              <ul className="mt-3 space-y-2">
+              <ul className="space-y-2">
                 {alasan.map((a) => (
                   <li key={a} className="flex gap-2.5 text-sm text-slate-700">
                     <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-slate-400" aria-hidden="true" />
@@ -129,12 +124,11 @@ export default async function SiswaDetailPage({ params }: { params: Promise<{ id
                 ))}
               </ul>
             ) : (
-              <p className="mt-3 text-sm text-slate-500">Tidak ada alasan spesifik tercatat.</p>
+              <p className="text-sm text-slate-500">Tidak ada alasan spesifik tercatat.</p>
             )}
-          </section>
+          </Panel>
 
-          {/* Saran tindakan */}
-          <section className="rounded-lg border border-[#005D4C]/20 bg-[#005D4C]/[0.03] p-5">
+          <div className="rounded-lg border border-[#005D4C]/20 bg-[#005D4C]/[0.03] p-5">
             <h2 className="flex items-center gap-2 font-display text-base font-semibold text-[#0F172A]">
               <Lightbulb className="h-4 w-4 text-[#005D4C]" aria-hidden="true" />
               Saran tindakan
@@ -151,23 +145,17 @@ export default async function SiswaDetailPage({ params }: { params: Promise<{ id
             ) : (
               <p className="mt-3 text-sm text-slate-500">Belum ada saran tindakan.</p>
             )}
-          </section>
+          </div>
         </div>
       )}
 
-      {/* Konteks data */}
       <div className="mt-5 grid gap-5 lg:grid-cols-2">
-        {/* Absensi 30 hari */}
-        <section className="rounded-lg border border-slate-200 bg-white p-5">
-          <h2 className="flex items-center gap-2 font-display text-base font-semibold text-[#0F172A]">
-            <CalendarX className="h-4 w-4 text-slate-400" aria-hidden="true" />
-            Kehadiran 30 hari
-          </h2>
+        <Panel title="Kehadiran 30 hari">
           {totalAbs === 0 ? (
-            <p className="mt-3 text-sm text-slate-500">Belum ada catatan kehadiran.</p>
+            <p className="text-sm text-slate-500">Belum ada catatan kehadiran.</p>
           ) : (
             <>
-              <p className="mt-3 text-sm text-slate-600">
+              <p className="text-sm text-slate-600">
                 <span className="font-semibold tabular-nums text-slate-900">{pctAlpa}%</span> alpa
                 <span className="text-slate-400"> ({alpa} dari {totalAbs} hari tercatat)</span>
               </p>
@@ -187,18 +175,13 @@ export default async function SiswaDetailPage({ params }: { params: Promise<{ id
               </dl>
             </>
           )}
-        </section>
+        </Panel>
 
-        {/* Nilai terbaru */}
-        <section className="rounded-lg border border-slate-200 bg-white p-5">
-          <h2 className="flex items-center gap-2 font-display text-base font-semibold text-[#0F172A]">
-            <GraduationCap className="h-4 w-4 text-slate-400" aria-hidden="true" />
-            Nilai terbaru
-          </h2>
+        <Panel title="Nilai terbaru">
           {siswa.nilai.length === 0 ? (
-            <p className="mt-3 text-sm text-slate-500">Belum ada nilai tercatat.</p>
+            <p className="text-sm text-slate-500">Belum ada nilai tercatat.</p>
           ) : (
-            <ul className="mt-3 divide-y divide-slate-100">
+            <ul className="divide-y divide-slate-100">
               {siswa.nilai.map((n) => {
                 const below = n.nilai < n.kkm;
                 return (
@@ -215,7 +198,7 @@ export default async function SiswaDetailPage({ params }: { params: Promise<{ id
               })}
             </ul>
           )}
-        </section>
+        </Panel>
       </div>
 
       {/* Riwayat & tindak lanjut (CRUD) */}
