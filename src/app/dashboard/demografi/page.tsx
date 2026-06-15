@@ -22,7 +22,7 @@ export default async function DemografiPage() {
         desc="Sebaran risiko menurut karakteristik siswa (jenis kelamin, status KIP, jarak ke sekolah) untuk menilai pemerataan. Agregat — sesuai cakupan Anda. Data ekonomi terenkripsi tidak ditampilkan."
       />
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-6 md:grid-cols-2">
         <Panel title="Risiko menurut jenis kelamin" desc="Apakah ada kesenjangan gender?">
           <Suspense fallback={<ChartSkeleton h={260} />}>
             <GenderSection scope={scope} />

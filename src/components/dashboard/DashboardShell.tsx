@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import {
@@ -34,6 +34,26 @@ import type { NavItem, ResolvedNavItem, NavSection } from "@/lib/nav";
 import { SECTION_LABEL } from "@/lib/nav";
 import type { Role } from "@prisma/client";
 import { TopBreadcrumb } from "@/components/dashboard/TopBreadcrumb";
+
+const MDMQ = "(min-width: 768px) and (max-width: 1023px)";
+
+function subscribeMd(cb: () => void) {
+  const mql = window.matchMedia(MDMQ);
+  mql.addEventListener("change", cb);
+  return () => mql.removeEventListener("change", cb);
+}
+
+function getMdSnapshot() {
+  return window.matchMedia(MDMQ).matches;
+}
+
+function getMdServerSnapshot() {
+  return false;
+}
+
+function useIsMd() {
+  return useSyncExternalStore(subscribeMd, getMdSnapshot, getMdServerSnapshot);
+}
 
 const ICONS: Record<NavItem["icon"], LucideIcon> = {
   home: Home,
@@ -99,7 +119,7 @@ function NavList({
               title={collapsed ? item.label : undefined}
               className={`flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] font-medium transition-colors duration-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#005D4C] focus-visible:ring-offset-1 ${
                 active
-                  ? "bg-[#005D4C]/8 text-[#005D4C]"
+                  ? "bg-[#F0FDFA] text-[#0F172A]"
                   : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
               } ${collapsed ? "justify-center" : ""}`}
             >
@@ -230,10 +250,13 @@ export default function DashboardShell({ nav, user, children }: Props) {
   const pathname = usePathname();
   const router = useRouter();
   const [loggingOut, setLoggingOut] = useState(false);
+  const isMd = useIsMd();
   const [collapsed, setCollapsed] = useState(() =>
     typeof window !== "undefined" && localStorage.getItem(SIDEBAR_KEY) === "1"
   );
   const drawerRef = useRef<HTMLDialogElement>(null);
+  const railCollapsed = isMd || collapsed;
+  const isAdminRoute = pathname?.startsWith("/dashboard/admin") ?? false;
 
   const toggleCollapsed = () => {
     setCollapsed((v) => {
@@ -267,11 +290,11 @@ export default function DashboardShell({ nav, user, children }: Props) {
 
   return (
     <div className="flex h-dvh bg-[#F8FAFC]">
-      {/* Sidebar — desktop, collapsible */}
+      {/* Sidebar — md: icon-rail always, lg: full/collapsible */}
       <aside
-        className={`relative hidden shrink-0 flex-col border-r border-slate-200 bg-[#F8FAFC] transition-[width] duration-200 ease-out motion-reduce:transition-none lg:flex ${
-          collapsed ? "w-14" : "w-56"
-        }`}
+        className={`relative hidden shrink-0 flex-col border-r border-slate-200 bg-[#F8FAFC] md:flex
+          lg:transition-[width] lg:duration-200 lg:ease-out lg:motion-reduce:transition-none
+          ${railCollapsed ? "w-[60px]" : "w-56"}`}
       >
         <SidebarInner
           nav={nav}
@@ -279,9 +302,9 @@ export default function DashboardShell({ nav, user, children }: Props) {
           initials={initials}
           isActive={isActive}
           loggingOut={loggingOut}
-          collapsed={collapsed}
+          collapsed={railCollapsed}
           onLogout={logout}
-          onToggle={toggleCollapsed}
+          onToggle={isMd ? undefined : toggleCollapsed}
         />
       </aside>
 
@@ -289,7 +312,7 @@ export default function DashboardShell({ nav, user, children }: Props) {
       <dialog
         ref={drawerRef}
         aria-label="Menu navigasi"
-        className="m-0 h-dvh max-h-none w-64 max-w-[85vw] bg-[#F8FAFC] p-0 shadow-xl backdrop:bg-slate-900/40 lg:hidden"
+        className="m-0 h-dvh max-h-none w-64 max-w-[85vw] bg-[#F8FAFC] p-0 shadow-xl backdrop:bg-slate-900/40 md:hidden"
       >
         <div className="flex h-full flex-col">
           <button
@@ -316,20 +339,23 @@ export default function DashboardShell({ nav, user, children }: Props) {
       {/* Main column */}
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         {/* Topbar — h-14, white, border-b (dashboards.md §3) */}
-        <header className="flex h-14 shrink-0 items-center gap-3 border-b border-slate-200 bg-white px-4 lg:px-6">
+        <header className="flex h-14 shrink-0 items-center gap-3 border-b border-slate-200 bg-white px-4 md:px-6">
           {/* Mobile hamburger */}
           <button
             type="button"
             onClick={openDrawer}
             aria-label="Buka menu"
-            className="-ml-1 rounded-md p-2 text-slate-500 hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-[#005D4C] lg:hidden"
+            className="-ml-1 rounded-md p-2 text-slate-500 hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-[#005D4C] md:hidden"
           >
             <Menu className="h-5 w-5" aria-hidden="true" />
           </button>
 
-          {/* Sekolah / tenant context (replaces big title — dashboards.md §3 pt.2) */}
-          {user.sekolah ? (
-            <div className="hidden items-center gap-2 text-[13px] text-slate-500 lg:flex">
+          {/* Breadcrumb — di kiri topbar khusus rute admin (superdinas superadmin) */}
+          {isAdminRoute ? <TopBreadcrumb role={user.role} variant="topbar" /> : null}
+
+          {/* Sekolah / tenant context (kepsek/guru/bk, non-admin) */}
+          {!isAdminRoute && user.sekolah ? (
+            <div className="hidden items-center gap-2 text-[13px] text-slate-500 md:flex">
               <School className="h-4 w-4 shrink-0 text-slate-400" aria-hidden="true" />
               <span className="truncate font-medium text-slate-700 max-w-[200px]">{user.sekolah}</span>
             </div>
@@ -350,27 +376,28 @@ export default function DashboardShell({ nav, user, children }: Props) {
             </kbd>
           </button>
 
-          {/* Notification bell — static dot, never pulse */}
+          {/* Notification bell — dot merah (dashboards.md) */}
           <button
             type="button"
-            aria-label="Notifikasi"
+            aria-label="Notifikasi (ada yang baru)"
             className="relative rounded-md p-2 text-slate-500 hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-[#005D4C] focus-visible:ring-offset-2"
           >
             <Bell className="h-[18px] w-[18px]" aria-hidden="true" />
+            <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-red-500" aria-hidden="true" />
           </button>
 
-          {/* Avatar — mobile only (desktop shows in sidebar footer) */}
+          {/* Avatar — solid teal (dashboards.md: 30×30 circle) */}
           <span
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#005D4C]/10 font-display text-xs font-bold text-[#005D4C] lg:hidden"
+            className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full bg-[#005D4C] font-display text-xs font-semibold text-white"
             aria-hidden="true"
           >
             {initials}
           </span>
         </header>
 
-        <main className="flex-1 overflow-y-auto px-4 py-6 sm:px-6 lg:px-8 lg:py-7">
+        <main className="flex-1 overflow-y-auto px-4 py-6 md:px-6 lg:py-[22px]">
           <div className="mx-auto w-full max-w-[1400px]">
-            <TopBreadcrumb role={user.role} />
+            {isAdminRoute ? null : <TopBreadcrumb role={user.role} />}
             {children}
           </div>
         </main>

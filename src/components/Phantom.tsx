@@ -1,15 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import "@aejkatappaja/phantom-ui";
+import type { ReactNode } from "react";
 
 /**
  * Pembungkus klien untuk <phantom-ui> (skeleton loader struktur-aware).
- * phantom-ui butuh API browser (mengukur DOM), jadi web component-nya
- * di-import dinamis saat mount. Konten anak ditulis sebagai markup NYATA —
- * itulah template skeleton-nya (teks transparan saat loading).
+ * phantom-ui butuh API browser (mengukur DOM) sehingga SSR tidak bisa
+ * render shimmer — server merender placeholder apa adanya, lalu hydrasi
+ * klien men-aktifkan web component untuk overlay shimmer sesuai
+ * attribute `loading` (CSS `ssr.css` menjaga teks tersembunyi selama SSR).
  *
  * Pakai: bungkus konten yang sedang dimuat dengan <Phantom loading={isLoading}>.
- * Saat lib belum termuat, fallback render konten apa adanya (tanpa shimmer).
+ * `count` mereplika template anak N kali (mode baris berulang).
  */
 export default function Phantom({
   loading,
@@ -20,36 +22,15 @@ export default function Phantom({
   loading: boolean;
   count?: number;
   className?: string;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
-  const [ready, setReady] = useState(false);
-
-  useEffect(() => {
-    let alive = true;
-    import("@aejkatappaja/phantom-ui")
-      .then(() => {
-        if (alive) setReady(true);
-      })
-      .catch(() => {
-        // Gagal memuat web component (mis. chunk error di dev) -> jangan
-        // crash; cukup render konten apa adanya tanpa shimmer.
-      });
-    return () => {
-      alive = false;
-    };
-  }, []);
-
-  // Sebelum web component terdaftar, jangan tampilkan shimmer (hindari flash);
-  // setelah ready, biarkan <phantom-ui> mengukur & menutupi dengan skeleton.
-  const showSkeleton = loading && ready;
-
   return (
     <phantom-ui
       class={className}
       animation="shimmer"
       reveal={0.3}
-      {...(showSkeleton ? { loading: true } : {})}
-      {...(count ? { count } : {})}
+      loading={loading || undefined}
+      count={count}
     >
       {children}
     </phantom-ui>

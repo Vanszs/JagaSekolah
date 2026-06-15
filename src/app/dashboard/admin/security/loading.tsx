@@ -19,7 +19,7 @@ export default function Loading() {
               <p className="mt-1 max-w-prose text-sm text-slate-500">
                 Baris penjelasan placeholder untuk bagian ini di security center.
               </p>
-              <div className="mt-4 grid gap-4 sm:grid-cols-3">
+              <div className="mt-4 grid gap-4 sm:grid-cols-2 md:grid-cols-3">
                 {[0, 1, 2].map((j) => (
                   <div key={j} className="rounded-lg border border-slate-200 bg-white p-5">
                     <p className="text-xs font-medium text-slate-500">Label metrik</p>

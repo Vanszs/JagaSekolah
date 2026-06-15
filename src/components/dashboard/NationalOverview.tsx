@@ -64,7 +64,7 @@ export default function NationalOverview() {
         </Suspense>
       </Panel>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-6 md:grid-cols-2">
         <Panel title="Intervensi per jenis (nasional)" desc="Komposisi tindak lanjut seluruh sekolah.">
           <Suspense fallback={<ChartSkeleton h={200} />}>
             <JenisSection />

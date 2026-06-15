@@ -53,7 +53,7 @@ export default function DinasDashboard({
         </Panel>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-6 md:grid-cols-2">
         <Panel title="Faktor risiko dominan" desc="Mengapa siswa berisiko di wilayah ini.">
           <Suspense fallback={<ChartSkeleton h={240} />}>
             <FactorSection scope={scope} />

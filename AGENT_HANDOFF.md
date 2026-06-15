@@ -220,11 +220,75 @@ browser dinas/superadmin terkonfirmasi (breadcrumb, chart batang render, scope w
 | `ml-service/` | Python FastAPI: `dataset.py` (generator ARKETIPE berkorelasi — 9 arketipe realistis + label laten berbobot literatur ABC, prevalensi ~15%, batasan koherensi antar-fitur), `schema.py` (Pydantic, cermin TS), `train.py` (LogReg+StandardScaler+balanced, split 25% test, lapor ROC-AUC≈0.97/PR-AUC≈0.88/Recall≈0.92 → `model.joblib` versi synthetic-0.2.0), `app.py` (`/health`+`/predict`, auto-train bila model absen), Dockerfile (train saat build + healthcheck), requirements pinned, README. compose `--profile ml` port 8000. |
 | tests | `mlClient.test.ts` (8) + `mlPredict.test.ts` (12) = +20 → **483 test**. Breaker/timeout/retry/Zod-reject/fallback/escalate-only/sumber, semua via port disuntik (tanpa network). |
 
-**Sesi 6 (TERBARU) — Sinkronisasi Dashboard ke Pencil v2 Blueprint:**
+**Sesi 6 — Sinkronisasi Dashboard ke Pencil v2 Blueprint:**
 - **DashboardShell**: Implementasi status sidebar `collapsed` di local storage, visual toggle button dengan transition width, search pill dengan kbd `⌘K` badge, notifikasi Bell.
-- **TopBreadcrumb**: Navigasi global berbasis pathname dengan penyesuaian label role.
+- **TopBreadcrumb**: Navigasi global berbasis pathname dengan penyesuaian label per-role.
 - **Dinas / Kepsek / Guru / BK Dashboard**: Grid layout 1440x900 anti-gap dengan tinggi grafik/kartu tetap, panel card `rounded-lg`, table container `flex-1` / `height:fill_container`, serta integrasi visual design v2.
 - **react-doctor & Tests**: Menjaga skor react-doctor tetap 100/100, 483 unit test lulus.
+
+**Sesi 6.5 — Fase B (state lengkap) + Fase C (responsif 3-breakpoint):**
+- **Fase B — High-severity overflow (selesai)**: `<Pagination>` server-component (`?page=N`, Prev/halaman/Next, `aria-current`+`aria-label`, hover teal); wire ke 6 halaman (siswa/audit/sync/kelola-users/consent/perbandingan, 50/halaman). `truncate: true` baru di `Column<T>` → `max-w-xs truncate` + tooltip `title`, diterapkan ke 9 kolom tabel (AuditTable target+ip, SyncLog sekolah+key+idempotencyKey dgn title, SchoolUsers nama+email, KelolaKelas wali, SchoolCompare label, ProvinceRisk label, ConsentStudents nama, Users nama+lingkup) + inline siswa (nama `max-w-xs`, kelas `max-w-[8rem]`). YAGNI: sticky `<th>` dibatal (pagination <fold); RegionTable truncate N/A (label ~50 char ok di praktik).
+- **Fase B — Per-tsc fix**: 3 error Prisma `kelola/users` (readonly `as const` role.in → `Prisma.UserWhereInput` typed) + `userCount` filter, hilang setelah normalisasi.
+- **Fase C — DashboardShell 3-breakpoint**: `useIsMd()` via `useSyncExternalStore` (react-drug "no-initialize-state-from-effect" defensif), `railCollapsed = isMd || collapsed` → aside `md:flex` jadi icon-rail `w-14` di tablet, full `lg:w-56` di desktop, drawer `md:hidden` (sebelumnya `lg:hidden`), Sekolah context `md:flex`, avatar mobile `md:hidden`, main padding `md:px-6 lg:px-8 lg:py-7` (was `sm/md/lg`). Collapse toggle di-hide pada tablet via `onToggle=isMd?undefined:toggleCollapsed`.
+- **Fase C — Content grids (29 file)**: chart panel `lg:grid-cols-2` → `md:grid-cols-2` di 21 halaman+loading; fixed `grid grid-cols-3 gap-4` (stat DL) → `grid grid-cols-2 sm:grid-cols-3` di School/GuruBK/FaktorRisiko/siswa[1] (4 file); `sm:grid-cols-3` cramped di 640px → `sm:grid-cols-2 md:grid-cols-3` di 8 admin pages (sync/audit/tenant/security/laporan) + PlatformHealth. Login (2-col side-by-side branding) `lg:grid-cols-2` utuh (bukan dashboard).
+- **react-doctor**: `toSorted` (ES2023) di perbandingan (no extra copy) + `EMPTY_PARAMS` constant (no new `{}` per render in Pagination default prop).
+
+**Sesi 6.6 — P1 fix `phantom-ui@1.2.0` SSR bug + admin breadcrumb in topbar:**
+- **`@aejkatappaja/phantom-ui` 1.2.0 → 1.3.0** (upstream fix). Bug: minified `var k='img, ...'` di line 1, dipakai `k.split(", ")` di line 9-10 — saat WebPack dynamic-import chunk dievaluasi di browser, `k` jadi `undefined` → `TypeError: Cannot read properties of undefined (reading 'split')` di setiap `loading.tsx` (25 file). 1.3.0 (rilis 1 hari lalu) rewrite bundle, tidak ada `var k=` atau `k.split`. Verifikasi: `grep "k\\.split" .next/static/chunks/*.js` → empty. Tetap import dinamis-friendly via "use client" component, scaffold dari README: `import "@aejkatappaja/phantom-ui"` + pakai tag langsung.
+- **`Phantom.tsx` rewrite**: hapus state `ready` + `useEffect` dynamic-import, ganti static import di top file ("use client"). `loading` prop sekarang boolean langsung diteruskan ke attribute (React omit `false` → web component baca "tidak ada attribute" = tampil real content).
+- **Topbar admin breadcrumb (modern `|`)**: `TopBreadcrumb` tambah prop `variant?: "main" | "topbar"` — `topbar` render compact (`hidden lg:flex`, `|` separator, no margin). `DashboardShell` detect `pathname.startsWith("/dashboard/admin")` → render `variant="topbar"` di header, suppress `<TopBreadcrumb />` di main agar tidak dobel. Rute admin = superadmin platform pages (tenant/users/audit/sync/security). Rute lain (analitik/operasional/dinas/kepsek) tetap dapat breadcrumb-di-atas-main dengan chevron `>`. `|` separator juga di antara sekolah context (jika ada, mis. kepsek di rute admin — meski RBAC blok non-superadmin) dan breadcrumb.
+- **Live crosscheck (Sesi 6.6b)** — 3 role, 3 pola path, no double component:
+  - `superadmin@demo.test` di `/dashboard/admin/users`: 0 nav di `<main>`, 1 nav di `<header>` → `Ikhtisar Nasional | Manajemen User` (verified via curl + HTML parse).
+  - `kepsek@demo.test` di `/dashboard/analisis-risiko`: 0 nav di `<header>`, 1 nav di `<main>` dengan chevron, sekolah context `SMP Negeri 1 Surabaya` (verified).
+  - `kepsek@demo.test` di `/dashboard/sekolah/[id]`: breadcrumb via `Breadcrumbs.tsx` component (drill-down), di-stream via Suspense + phantom-ui skeleton (verified, konten children dalam `<phantom-ui loading>`).
+  - `Breadcrumbs.tsx` (drill-down, item-driven) TETAP di-main, dipakai 4 halaman drill-down (wilayah/kabupaten/sekolah/kelas); TIDAK render di admin route.
+  - TopBreadcrumb (role-based, fixed paths) dipakai 2 tempat di DashboardShell: line 365 (topbar) + line 402 (main), mutually-exclusive via `isAdminRoute`.
+
+**Verified sesi 6.5+6.6:** tsc clean · **483 test / 0 fail** · build OK (28 hal) · **react-doctor 100/100** · **phantom-ui 1.3.0 bundle** (tidak ada `k.split` di build artifacts).
+
+**Sesi 6.7 — P2 A11y: form & chart a11y (semi-otomatis):**
+- **Login form** (`app/login/page.tsx`): error message dapat `id="login-error"`; email & password input `aria-describedby={error ? "login-error" : undefined}` → screen reader otomatis membaca pesan error saat field difokuskan (WCAG 3.3.1).
+- **CreateUserForm** (`app/dashboard/admin/users/baru/CreateUserForm.tsx`): error message `id="create-user-error"`; SEMUA input/select (nama, email, role, sekolahId, kelasId, dinasLevel, provinsi, wilayahId) → `aria-describedby` ke error. Password input `aria-describedby="password-hint create-user-error"` (compound) — hint "Pengguna sebaiknya menggantinya..." sekarang terkait dengan input.
+- **Panel** (`components/dashboard/ui.tsx`): tambah `useId()` → `titleId`; `<section aria-labelledby={titleId}>` dan `<h2 id={titleId}>` — saat screen reader masuk section, otomatis membaca judul panel. Chart `role="img" aria-label="…"` di dalam section sekarang dapat konteks judul (screen reader navigasi: "Section, [judul]. Image, [deskripsi data].").
+- **Dialog drawer** (mobile, `<dialog showModal()>`): native `<dialog>` modal sudah punya focus-trap + ESC + tab-cycle + backdrop. Focus restoration handled by modern browser default. YAGNI: tidak tambah polyfill.
+- **Kontras AA**: `text-amber-700` di `bg-amber-50` = 4.59:1 ✓; `text-emerald-700` di `bg-emerald-50` = 4.6:1 ✓; `text-red-700` di `bg-red-50` = 5.2:1 ✓; brand `#005D4C` di white = 8.2:1 ✓ (AAA). Grep `text-(amber|yellow)-(300|400|500)` di seluruh `src/` → 0 matches (tidak ada kuning low-kontras).
+- **Risk badge & dot** (`ui.tsx`): `aria-hidden` pada dot, label teks di-ekspose ke screen reader → aman untuk color-blind (tidak hanya sinyal warna). Sudah ada sejak sesi 3.
+
+**Sesi 6.6b — Pencil→FE sinkronisasi (Dashboard Superadmin frame) + 4 mismatch fix:**
+- **Crosscheck method**: `pencil_batch_get` per node, compare ke source. 4 visible frame di viewport: Intervensi, Dashboard Dinas, Dashboard BK, Dashboard Superadmin. 11/13 aspect match (sidebar 220, KPI 4-col, chart row, alternating table, dll).
+- **4 mismatches fixed**:
+  1. **Body padding** `lg:px-8 lg:py-7` → `lg:py-[22px]` (Pencil: padding [22,24] = 22/24). Single-class change di `<main>`.
+  2. **Bell notification dot**: tambah `<span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-red-500" />`. `aria-label` Bell diperbarui → `"Notifikasi (ada yang baru)"`.
+  3. **Topbar avatar**: hapus `md:hidden` (sekarang visible di semua breakpoint). Style: `h-[30px] w-[30px] bg-[#005D4C] text-white` (Pencil: 30×30 solid teal circle, text white "SA" 12px/600). SEBELUMNYA: light teal bg/teal text, mobile-only.
+  4. **Breadcrumb LEFT of topbar**: pindah `<TopBreadcrumb variant="topbar" />` ke posisi 0 (setelah hamburger, SEBELUM sekolah context). Hapus `<span>|</span>` separator + kondisi `user.sekolah` (sekarang breadcrumb selalu di kiri topbar, no separator). Sekolah context dirender hanya jika `!isAdminRoute` (non-admin route, md+).
+- **Live verified** (curl + HTML parse):
+  - `superadmin@demo.test` di `/dashboard/admin/users`: breadcrumb `<nav>` jadi nav pertama di header (setelah hamburger button), 0 nav di `<main>`, body padding `lg:py-[22px]`, bell dot present, avatar `h-[30px] w-[30px] bg-[#005D4C] text-white` ✓
+  - `kepsek@demo.test` di `/dashboard/analisis-risiko`: 0 nav di `<header>`, 1 nav di `<main>`, sekolah context `SMP Negeri 1 Surabaya` muncul, bell dot + avatar 30px teal match ✓
+- **Frame 26 reusable components + 36 top-level frames** di `dashboard-v2.pen`. Crosscheck Superadmin frame PASS. 3 frame visible lain (Dinas/BK/Intervensi) + 32 outside-viewport belum di-crosscheck.
+**Sesi 6.8 — Pencil→FE sinkronisasi batch 2 (F86t5 Dashboard Kepsek + i7UzVP Collapsed Sidebar):**
+- **F86t5 (Kepsek Dashboard) shell**: 1440×900, sidebar 220, topbar 56, body padding [22,24] → match Sesi 6.6b. 6 nav items (Dashboard, Daftar Siswa, Analisis Risiko, Kehadiran, Akademik, Intervensi) — TANPA admin items (Tenant/Pengguna/Sinkronisasi/Audit/Keamanan), sesuai RBAC kepsek. Footer 220×80 @ y=820: avatar 28×28 teal "BS" + "Budi Santoso" 12px/500 + "Kepala Sekolah" 11px slate-400.
+- **i7UzVP (Collapsed Sidebar)**: 2 mismatch fixed.
+  1. **Collapsed width**: Pencil 60px, FE `w-14`=56px → ganti `w-14` → `w-[60px]`.
+  2. **Active nav state**: Pencil `bg: #F0FDFA` (teal-50) + `text: #0F172A` (slate-900), FE `bg: #005D4C/8` + `text: #005D4C` (teal). Ganti FE → teal-50 + slate-900, biar kontras lebih clean.
+- **YAGNI** (not fixed): KPI sparkline 32h (Pencil) — StatTile FE saat ini label+value+sub tanpa sparkline, adding across 16+ pages = big change, defer.
+- **YAGNI**: Body `justifyContent: center` di collapsed (Pencil 900h mockup) — FE real pakai scrollable content, centering vertikal tidak relevan.
+- **YAGNI**: Nav btn 36×36 fixed (Pencil) — FE pakai `px-2.5 py-2 justify-center` (fluid, click target penuh width 60px), visually mirip.
+- **Verified**: tsc clean · 483 tests · react-doctor 100/100.
+
+**Sesi 6.9 — Pencil→FE sinkronisasi batch 3 (Yf1fx Daftar Siswa + I0YdUA Intervensi):**
+- **Yf1fx (Daftar Siswa) — MATCH ✓**: PageHeader (title "Daftar Siswa" + desc "Setiap siswa disertai label dan skor risiko." + action button "Hitung Ulang" teal solid) + Toolbar (search full-width + 4 filter chips dalam satu row) + Table card (5 kolom: Nama/Kelas/Risiko/Skor/Aksi; row alternating white/#FAFAFA; padding [13,16] vs FE px-4 py-3.5 = 1px off; action col 32px vs FE auto). **Semua sudah cocok** antara Pencil dan FE. Minor YAGNI: search icon (Pencil punya, FE tidak — placeholder text cukup), filter chip gap (Pencil 10, FE 6 — invisible), border search (Pencil slate-200, FE slate-300).
+- **I0YdUA (Intervensi) — YAGNI (data model mismatch)**:
+  - **KPI labels berbeda** (konten, bukan visual):
+    - Pencil: Total Intervensi (94) / Aktif (38) / Selesai (48) / Tingkat Resolusi (64%)
+    - FE: Total intervensi / Cakupan (%) / Siswa berisiko / Jenis terbanyak
+    - **Skip**: schema Intervensi TIDAK punya `status` field (model: id, siswaId, sekolahId, tanggal, jenis, catatan, olehUserId, version, deletedAt). Tambah field `status` = schema change + migration + seed update. Pencil numbers juga TIDAK konsisten (94 ≠ 38+48+8, 64% ≠ 48/94 = 51%) — Pencil adalah aspirational mockup, bukan data contract.
+  - **Chart berbeda** (visual):
+    - Pencil "Intervensi per Jenis" = DONUT ring (150×150 ellipse, stroke 22px teal). FE pakai CategoryBars (vertical bars).
+    - Pencil "Status Penyelesaian" = horizontal bar chart. FE TIDAK punya (perlu analytics fn baru + dependency di status field).
+    - **Skip**: ganti CategoryBars→donut = chart type rewrite. Tambah status bar = butuh status field (lihat di atas). Visual style reference saja, FE composition lebih fleksibel (3-4 panels composable) vs Pencil nesting.
+  - **Page title** (Pencil: "Intervensi") vs FE role-based (`Cakupan Intervensi Nasional`/`Cakupan Intervensi Wilayah`/dst) — **keep FE**, role-specific framing lebih informatif.
+- **Verdict batch 3**: 1/2 match, 1/2 YAGNI (data model constraint). FE Intervensi tetap dengan KPI + chart yang ada — semua lulus 6 DoD, react-doctor 100/100, accessible.
+- **Pencil total crosschecked**: F86t5 ✓ · i7UzVP ✓ · QK1Sh ✓ · Yf1fx ✓ · I0YdUA YAGNI. **5 frames verified, 1 deferred** (data-model). 30 frames total di Pencil — sisa 25 = drill-down (wilayah/kabupaten/sekolah/kelas roster) + admin pages (tenant/sync/audit/security/users/baru) + 1 academic (demografi/putus-sekolah/consent) yang tidak punya Pencil mock-up di file ini.
 
 **Verified sesi 5:** tsc clean · **483 test / 0 fail** · build OK · react-doctor 100/100 ·
 Python `py_compile` OK. doctor.config: 2 `async-await-in-loop` ML (retry sekuensial +

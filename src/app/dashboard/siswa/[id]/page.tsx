@@ -112,7 +112,7 @@ export default async function SiswaDetailPage({ params }: { params: Promise<{ id
           />
         </div>
       ) : (
-        <div className="mt-6 grid gap-5 lg:grid-cols-2">
+        <div className="mt-6 grid gap-5 md:grid-cols-2">
           <Panel title="Mengapa ditandai begini" className="[&>div:first-child]:flex [&>div:first-child]:items-center [&>div:first-child]:gap-2">
             {alasan.length > 0 ? (
               <ul className="space-y-2">
@@ -149,7 +149,7 @@ export default async function SiswaDetailPage({ params }: { params: Promise<{ id
         </div>
       )}
 
-      <div className="mt-5 grid gap-5 lg:grid-cols-2">
+      <div className="mt-5 grid gap-5 md:grid-cols-2">
         <Panel title="Kehadiran 30 hari">
           {totalAbs === 0 ? (
             <p className="text-sm text-slate-500">Belum ada catatan kehadiran.</p>
@@ -159,7 +159,7 @@ export default async function SiswaDetailPage({ params }: { params: Promise<{ id
                 <span className="font-semibold tabular-nums text-slate-900">{pctAlpa}%</span> alpa
                 <span className="text-slate-400"> ({alpa} dari {totalAbs} hari tercatat)</span>
               </p>
-              <dl className="mt-4 grid grid-cols-3 gap-3 text-center">
+              <dl className="mt-4 grid grid-cols-2 gap-3 text-center sm:grid-cols-3">
                 {(["hadir", "izin", "sakit"] as AbsensiStatus[]).map((s) => (
                   <div key={s} className="rounded-lg bg-slate-50 py-2">
                     <dt className="text-xs capitalize text-slate-500">{s}</dt>

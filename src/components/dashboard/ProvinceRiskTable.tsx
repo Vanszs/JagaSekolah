@@ -11,7 +11,7 @@ const pctMerah = (r: RegionRisk) => (r.total > 0 ? Math.round((r.merah / r.total
  */
 export function ProvinceRiskTable({ rows }: { rows: RegionRisk[] }) {
   const columns: Column<RegionRisk>[] = [
-    { key: "label", header: "Provinsi", sortValue: (r) => r.label },
+    { key: "label", header: "Provinsi", sortValue: (r) => r.label, truncate: true },
     { key: "sekolah", header: "Sekolah", sortValue: (r) => r.sekolah, align: "right", numeric: true },
     { key: "total", header: "Siswa", sortValue: (r) => r.total, align: "right", numeric: true },
     { key: "merah", header: "Tinggi", sortValue: (r) => r.merah, align: "right", numeric: true, cell: (r) => <span className="font-medium text-red-600">{r.merah}</span> },

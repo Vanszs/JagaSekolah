@@ -39,7 +39,7 @@ export default async function AkademikPage() {
         <AkademikKpis scope={scope} />
       </Suspense>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-6 md:grid-cols-2">
         <Panel title="Rata-rata nilai per mata pelajaran" desc="Diurutkan dari terendah (perlu perhatian).">
           <Suspense fallback={<ChartSkeleton h={240} />}>
             <RataMapelSection scope={scope} />

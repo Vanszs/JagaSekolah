@@ -55,7 +55,7 @@ export default async function LaporanPage() {
       </Panel>
 
       <Panel title="Ringkasan komposisi risiko" desc="Snapshot terkini wilayah.">
-        <dl className="grid gap-4 sm:grid-cols-3">
+        <dl className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
           <div className="rounded-lg border border-slate-200 p-4">
             <dt className="text-sm text-slate-500">Risiko tinggi</dt>
             <dd className="mt-1 text-2xl font-semibold tabular-nums text-red-600">{kpis.merah.toLocaleString("id-ID")}</dd>

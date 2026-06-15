@@ -8,7 +8,7 @@ const pctMerah = (r: RegionRisk) => (r.total > 0 ? Math.round((r.merah / r.total
 /** Tabel perbandingan sekolah (agregat). Drill ke /dashboard/sekolah/[id]. */
 export function SchoolCompareTable({ rows }: { rows: RegionRisk[] }) {
   const columns: Column<RegionRisk>[] = [
-    { key: "label", header: "Sekolah", sortValue: (r) => r.label },
+    { key: "label", header: "Sekolah", sortValue: (r) => r.label, truncate: true },
     { key: "sub", header: "NPSN", cell: (r) => <span className="text-xs text-slate-400">{r.sub?.replace("NPSN ", "") ?? "—"}</span> },
     { key: "total", header: "Siswa", sortValue: (r) => r.total, align: "right", numeric: true },
     { key: "merah", header: "Tinggi", sortValue: (r) => r.merah, align: "right", numeric: true, cell: (r) => <span className="font-medium text-red-600">{r.merah}</span> },

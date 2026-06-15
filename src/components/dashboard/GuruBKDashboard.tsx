@@ -65,7 +65,7 @@ export default async function GuruBKDashboard({ role, scope }: { role: Role; sco
       </div>
 
       {/* Grafik kecil yang relevan dgn peran */}
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-6 md:grid-cols-2">
         <Panel title={isBK ? "Sebaran kasus" : "Sebaran risiko kelas"}>
           <Suspense fallback={<ChartSkeleton h={220} />}><DonutSection scope={scope} /></Suspense>
         </Panel>
@@ -137,7 +137,7 @@ async function AttendanceSection({ scope }: { scope: Prisma.SiswaWhereInput }) {
     { label: "Alpa kronis", value: `${a.kronisCount}`, tone: "text-amber-700" },
   ];
   return (
-    <dl className="grid grid-cols-3 gap-4">
+    <dl className="grid grid-cols-2 gap-4 sm:grid-cols-3">
       {stats.map((s) => (
         <div key={s.label} className="rounded-lg bg-slate-50 p-4 text-center">
           <dd className={`text-2xl font-bold tabular-nums ${s.tone}`}>{s.value}</dd>

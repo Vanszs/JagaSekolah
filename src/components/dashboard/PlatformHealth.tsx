@@ -52,7 +52,7 @@ async function StatusStrip() {
   ];
   return (
     <section aria-label="Status sistem" className="rounded-lg border border-slate-200 bg-white">
-      <div className="grid divide-y divide-slate-100 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+      <div className="grid divide-y divide-slate-100 sm:grid-cols-2 md:grid-cols-3 sm:divide-x sm:divide-y-0">
         {items.map((s) => {
           const Icon = s.icon;
           return (

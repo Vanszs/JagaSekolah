@@ -43,23 +43,26 @@ const HOME_LABEL: Record<Role, string> = {
  */
 const DYNAMIC_PREFIXES = ["/dashboard/wilayah", "/dashboard/kabupaten", "/dashboard/sekolah", "/dashboard/siswa/"];
 
-/** Breadcrumb global di atas main content, dibangun dari pathname. */
-export function TopBreadcrumb({ role }: { role: Role }) {
+/**
+ * Breadcrumb global. Dua varian:
+ * - "main" (default) — render di atas main content, mb-5.
+ * - "topbar" — render di dalam topbar, compact, no margin.
+ */
+export function TopBreadcrumb({ role, variant = "main" }: { role: Role; variant?: "main" | "topbar" }) {
   const pathname = usePathname();
 
-  // Drill-down dinamis: biarkan halaman merender breadcrumb kaya-nama sendiri.
   if (DYNAMIC_PREFIXES.some((p) => pathname.startsWith(p))) return null;
 
   const home = { label: HOME_LABEL[role], href: "/dashboard" };
 
-  // Beranda → cukup tampilkan label beranda sebagai item aktif.
   if (pathname === "/dashboard") {
+    if (variant === "topbar") return <Topbar items={[{ label: home.label }]} />;
     return <Bar items={[{ label: home.label }]} />;
   }
 
   const leaf = LABELS[pathname];
-  // Rute /dashboard/kelola/* punya induk "Kelola" implisit; tampilkan langsung leaf.
   const items = [home, { label: leaf ?? prettifySegment(pathname) }];
+  if (variant === "topbar") return <Topbar items={items} />;
   return <Bar items={items} />;
 }
 
@@ -93,6 +96,30 @@ function Bar({ items }: { items: { label: string; href?: string }[] }) {
           );
         })}
       </ol>
+    </nav>
+  );
+}
+
+function Topbar({ items }: { items: { label: string; href?: string }[] }) {
+  return (
+    <nav aria-label="Breadcrumb" className="hidden items-center gap-2 text-[13px] lg:flex">
+      {items.map((c, i) => {
+        const last = i === items.length - 1;
+        return (
+          <span key={`${c.label}-${i}`} className="flex items-center gap-2">
+            {i > 0 ? <span className="text-slate-300" aria-hidden="true">|</span> : null}
+            {c.href && !last ? (
+              <Link href={c.href} className="text-slate-500 transition-colors hover:text-[#005D4C]">
+                {c.label}
+              </Link>
+            ) : (
+              <span className={last ? "font-medium text-slate-900" : "text-slate-500"} aria-current={last ? "page" : undefined}>
+                {c.label}
+              </span>
+            )}
+          </span>
+        );
+      })}
     </nav>
   );
 }

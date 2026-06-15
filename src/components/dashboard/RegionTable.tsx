@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import type { RegionRisk } from "@/lib/analytics";
+import { EmptyState } from "@/components/dashboard/ui";
 
 /**
  * Tabel agregat wilayah/sekolah/kelas dgn baris yang bisa di-drill-down.
@@ -19,7 +20,7 @@ export function RegionTable({
   unitLabel?: string;
 }) {
   if (rows.length === 0) {
-    return <p className="text-sm text-slate-500">Belum ada data.</p>;
+    return <EmptyState title="Belum ada data" desc="Data wilayah akan muncul setelah tersedia di lingkup ini." />;
   }
   return (
     <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">

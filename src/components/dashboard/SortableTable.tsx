@@ -3,6 +3,7 @@
 import { useState, useMemo, type ReactNode } from "react";
 import Link from "next/link";
 import { ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { EmptyState } from "@/components/dashboard/ui";
 
 export interface Column<T> {
   /** Kunci unik kolom. */
@@ -15,6 +16,8 @@ export interface Column<T> {
   align?: "left" | "right" | "center";
   /** Angka → pakai tabular-nums. */
   numeric?: boolean;
+  /** Potong teks panjang dgn ellipsis + tooltip judul. */
+  truncate?: boolean;
 }
 
 interface SortableTableProps<T> {
@@ -68,7 +71,7 @@ export function SortableTable<T>({
   }
 
   if (rows.length === 0) {
-    return <p className="py-8 text-center text-sm text-slate-500">{emptyText}</p>;
+    return <EmptyState title={emptyText} desc="" />;
   }
 
   return (
@@ -126,6 +129,15 @@ export function SortableTable<T>({
                 {columns.map((col, ci) => {
                   const content = col.cell ? col.cell(row) : col.sortValue ? String(col.sortValue(row)) : null;
                   const base = `px-4 py-3 ${alignClass[col.align ?? "left"]} ${col.numeric ? "tabular-nums" : ""}`;
+                  const baseText = !col.cell && col.sortValue ? String(col.sortValue(row)) : null;
+                  const truncate = col.truncate;
+                  const inner = truncate ? (
+                    <span className="block max-w-xs truncate" title={baseText ?? undefined}>
+                      {content}
+                    </span>
+                  ) : (
+                    content
+                  );
                   if (href && ci === 0) {
                     return (
                       <td key={col.key} className={`${base} font-medium`}>
@@ -133,14 +145,14 @@ export function SortableTable<T>({
                           href={href}
                           className="text-[#0F172A] hover:text-[#005D4C] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#005D4C]"
                         >
-                          {content}
+                          {inner}
                         </Link>
                       </td>
                     );
                   }
                   return (
                     <td key={col.key} className={`${base} ${ci === 0 ? "font-medium text-slate-900" : "text-slate-600"}`}>
-                      {content}
+                      {inner}
                     </td>
                   );
                 })}

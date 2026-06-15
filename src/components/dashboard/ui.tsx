@@ -1,3 +1,4 @@
+import { useId } from "react";
 import type { KategoriRisiko } from "@prisma/client";
 import { RISK_CONFIG } from "@/lib/risk";
 
@@ -82,10 +83,11 @@ export function Panel({
   children: React.ReactNode;
   className?: string;
 }) {
+  const titleId = useId();
   return (
-    <section className={`rounded-lg border border-slate-200 bg-white p-6 ${className}`}>
+    <section aria-labelledby={titleId} className={`rounded-lg border border-slate-200 bg-white p-6 ${className}`}>
       <div className="mb-5">
-        <h2 className="font-display text-base font-semibold text-[#0F172A]">{title}</h2>
+        <h2 id={titleId} className="font-display text-base font-semibold text-[#0F172A]">{title}</h2>
         {desc && <p className="mt-0.5 text-sm text-slate-500">{desc}</p>}
       </div>
       {children}

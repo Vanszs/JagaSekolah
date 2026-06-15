@@ -2,21 +2,35 @@ import { redirect } from "next/navigation";
 import { RefreshCw, Upload, Info } from "lucide-react";
 import { requireDashboardContext } from "@/lib/session";
 import { prisma } from "@/lib/db";
-import { PageHeader, StatTile, Panel } from "@/components/dashboard/ui";
+import { PageHeader, StatTile, Panel, EmptyState } from "@/components/dashboard/ui";
+import { Pagination } from "@/components/dashboard/Pagination";
 import { RecomputeButton } from "@/components/dashboard/RecomputeButton";
 import { SyncLogTable } from "@/components/dashboard/SyncLogTable";
 
 export const dynamic = "force-dynamic";
 
-export default async function SyncPage() {
+const PAGE_SIZE = 50;
+
+export default async function SyncPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
   const ctx = await requireDashboardContext("/dashboard/admin/sync");
   if (ctx.role !== "superadmin") redirect("/dashboard");
+  const { page: pageStr = "1" } = await searchParams;
+  const page = Math.max(1, Number.parseInt(pageStr, 10) || 1);
 
   const since = new Date();
   since.setDate(since.getDate() - 30);
-  const [logs, sekolah, total30, gagal30] = await Promise.all([
-    prisma.syncLog.findMany({ orderBy: { createdAt: "desc" }, take: 100 }),
+  const [logs, sekolah, total, total30, gagal30] = await Promise.all([
+    prisma.syncLog.findMany({
+      orderBy: { createdAt: "desc" },
+      take: PAGE_SIZE,
+      skip: (page - 1) * PAGE_SIZE,
+    }),
     prisma.sekolah.findMany({ select: { id: true, nama: true } }),
+    prisma.syncLog.count(),
     prisma.syncLog.count({ where: { createdAt: { gte: since } } }),
     prisma.syncLog.count({ where: { createdAt: { gte: since }, status: { not: "success" } } }),
   ]);
@@ -37,13 +51,13 @@ export default async function SyncPage() {
         desc="Pantau sinkronisasi data dari sekolah, picu penghitungan ulang risiko, dan kelola impor data."
       />
 
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
         <StatTile label="Sinkronisasi (30 hari)" value={total30.toLocaleString("id-ID")} accent="brand" sub="total transaksi" />
         <StatTile label="Gagal (30 hari)" value={gagal30.toLocaleString("id-ID")} accent={gagal30 > 0 ? "merah" : "hijau"} sub="perlu ditinjau" />
         <StatTile label="Sekolah terhubung" value={sekolah.length.toLocaleString("id-ID")} accent="brand" sub="tenant aktif" />
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-6 md:grid-cols-2">
         <Panel title="Hitung ulang risiko" desc="Skoring ulang seluruh siswa (consent granted) berdasarkan data terbaru. Dijalankan terserialisasi.">
           <RecomputeButton />
         </Panel>
@@ -58,8 +72,19 @@ export default async function SyncPage() {
         </Panel>
       </div>
 
-      <Panel title="Riwayat sinkronisasi" desc="100 transaksi sinkronisasi terbaru dari sekolah.">
-        <SyncLogTable rows={rows} />
+      <Panel title="Riwayat sinkronisasi" desc="Diurutkan dari yang paling baru. Gunakan halaman untuk melihat entri sebelumnya.">
+        {rows.length > 0 ? (
+          <>
+            <SyncLogTable rows={rows} />
+            <Pagination
+              page={page}
+              totalPages={Math.max(1, Math.ceil(total / PAGE_SIZE))}
+              basePath="/dashboard/admin/sync"
+            />
+          </>
+        ) : (
+          <EmptyState title="Belum ada riwayat sinkronisasi" desc="Transaksi sync akan muncul setelah sekolah mengirim pembaruan data." />
+        )}
       </Panel>
 
       <section className="rounded-lg border border-dashed border-slate-300 bg-slate-50/60 p-5">

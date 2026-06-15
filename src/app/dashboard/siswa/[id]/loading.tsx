@@ -9,7 +9,7 @@ export default function Loading() {
         <h1 className="font-display text-2xl font-bold text-[#0F172A]">Nama Siswa Placeholder</h1>
         <p className="mt-1 text-sm text-slate-500">VIII-A · NISN 0012345678</p>
 
-        <div className="mt-6 grid gap-5 lg:grid-cols-2">
+        <div className="mt-6 grid gap-5 md:grid-cols-2">
           {[0, 1].map((i) => (
             <section key={i} className="rounded-lg border border-slate-200 bg-white p-5">
               <h2 className="font-display text-base font-semibold text-[#0F172A]">Judul bagian</h2>

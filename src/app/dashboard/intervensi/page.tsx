@@ -43,7 +43,7 @@ export default async function IntervensiPage() {
         <IntervensiKpis scope={scope} />
       </Suspense>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-6 md:grid-cols-2">
         <Panel title="Intervensi per jenis" desc="Komposisi tindak lanjut.">
           <Suspense fallback={<ChartSkeleton h={220} />}>
             <JenisSection scope={scope} />

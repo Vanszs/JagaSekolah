@@ -98,6 +98,7 @@ function LoginForm() {
 
       {error && (
         <p
+          id="login-error"
           role="alert"
           className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"
         >
@@ -116,6 +117,7 @@ function LoginForm() {
             autoComplete="email"
             required
             placeholder="nama@sekolah.sch.id"
+            aria-describedby={error ? "login-error" : undefined}
             className="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 transition-colors focus:border-[#005D4C] focus:outline-none focus:ring-1 focus:ring-[#005D4C]"
           />
         </div>
@@ -135,6 +137,7 @@ function LoginForm() {
               autoComplete="current-password"
               required
               placeholder="••••••••"
+              aria-describedby={error ? "login-error" : undefined}
               className="block w-full rounded-md border border-slate-300 px-3 py-2 pr-10 text-sm text-slate-900 placeholder:text-slate-400 transition-colors focus:border-[#005D4C] focus:outline-none focus:ring-1 focus:ring-[#005D4C]"
             />
             <button

@@ -33,6 +33,7 @@ export function UsersTable({ rows }: { rows: UserRow[] }) {
           <span className="block text-xs text-slate-400">{r.email}</span>
         </span>
       ),
+      truncate: true,
     },
     {
       key: "role",
@@ -40,7 +41,7 @@ export function UsersTable({ rows }: { rows: UserRow[] }) {
       sortValue: (r) => r.role,
       cell: (r) => <span className={`inline-flex rounded-md px-2 py-0.5 text-xs font-medium ring-1 ring-inset ${ROLE_RING[r.role]}`}>{r.roleLabel}</span>,
     },
-    { key: "lingkup", header: "Lingkup", sortValue: (r) => r.lingkup, cell: (r) => <span className="text-slate-600">{r.lingkup}</span> },
+    { key: "lingkup", header: "Lingkup", sortValue: (r) => r.lingkup, cell: (r) => <span className="text-slate-600">{r.lingkup}</span>, truncate: true },
     {
       key: "aktif",
       header: "Status",

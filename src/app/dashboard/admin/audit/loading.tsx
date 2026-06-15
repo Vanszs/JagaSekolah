@@ -12,7 +12,7 @@ export default function Loading() {
       </div>
 
       <Phantom loading>
-        <div className="grid gap-4 sm:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
           {[0, 1, 2].map((i) => (
             <div key={i} className="rounded-lg border border-slate-200 bg-white p-5">
               <p className="text-xs font-medium text-slate-500">Label metrik</p>

@@ -62,7 +62,7 @@ export default async function KehadiranPage() {
         </Suspense>
       </Panel>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-6 md:grid-cols-2">
         <Panel title="Distribusi status (30 hari)" desc="Proporsi status kehadiran terkini.">
           <Suspense fallback={<ChartSkeleton h={220} />}>
             <DistSection scope={scope} />
@@ -76,7 +76,7 @@ export default async function KehadiranPage() {
       </div>
 
       {aggregate && (
-        <div className="grid gap-6 lg:grid-cols-2">
+        <div className="grid gap-6 md:grid-cols-2">
           <Panel title="Perbandingan kehadiran antarprovinsi" desc="Persentase hadir/alpa per provinsi.">
             <Suspense fallback={<ChartSkeleton h={200} />}>
               <ProvinceSection />

@@ -28,8 +28,8 @@ export function AuditTable({ rows }: { rows: AuditRow[] }) {
       ),
     },
     { key: "aksi", header: "Aktivitas", sortValue: (r) => r.aksi, cell: (r) => <span className="text-slate-700">{r.aksi}</span> },
-    { key: "target", header: "Target", cell: (r) => <span className="font-mono text-xs text-slate-500">{r.target}</span> },
-    { key: "ip", header: "IP", cell: (r) => <span className="font-mono text-xs text-slate-400">{r.ip}</span> },
+    { key: "target", header: "Target", cell: (r) => <span className="font-mono text-xs text-slate-500">{r.target}</span>, truncate: true },
+    { key: "ip", header: "IP", cell: (r) => <span className="font-mono text-xs text-slate-400">{r.ip}</span>, truncate: true },
   ];
   return (
     <SortableTable

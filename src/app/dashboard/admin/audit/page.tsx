@@ -8,20 +8,29 @@ import { aksiLabel } from "@/lib/auditLabels";
 import { fmtDateTime } from "@/lib/format";
 import { auditActivityTrend, auditByAksi } from "@/lib/analytics";
 import { PageHeader, StatTile, Panel, ChartSkeleton } from "@/components/dashboard/ui";
+import { Pagination } from "@/components/dashboard/Pagination";
 import { SingleAreaChart } from "@/components/charts/recharts/SingleAreaChart";
 import { HorizontalBarChart } from "@/components/charts/recharts/HorizontalBarChart";
 import { AuditTable } from "@/components/dashboard/AuditTable";
 
 export const dynamic = "force-dynamic";
 
+const PAGE_SIZE = 50;
+
 /**
  * Audit Log (Superadmin) — jejak aktivitas append-only (UU PDP): tren aktivitas,
  * komposisi jenis aksi, dan tabel rinci siapa-apa-kapan-dari mana.
  */
-export default async function AuditPage() {
+export default async function AuditPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
   const ctx = await requireDashboardContext("/dashboard/admin/audit");
   requireRole(ctx, "superadmin");
   await audit(ctx, "view_audit", "audit:list");
+  const { page: pageStr = "1" } = await searchParams;
+  const page = Math.max(1, Number.parseInt(pageStr, 10) || 1);
 
   return (
     <div className="space-y-8">
@@ -47,9 +56,9 @@ export default async function AuditPage() {
         </Panel>
       </div>
 
-      <Panel title="Jejak aktivitas terbaru" desc="100 entri terakhir. Log bersifat append-only.">
+      <Panel title="Jejak aktivitas terbaru" desc="Diurutkan dari yang paling baru. Log bersifat append-only.">
         <Suspense fallback={<ChartSkeleton h={240} />}>
-          <AuditTableSection />
+          <AuditTableSection page={page} />
         </Suspense>
       </Panel>
     </div>
@@ -87,12 +96,16 @@ async function AksiSection() {
   return <HorizontalBarChart seriesName="Entri" data={rows.map((r) => ({ label: aksiLabel(r.aksi), value: r.count }))} />;
 }
 
-async function AuditTableSection() {
-  const logs = await prisma.auditLog.findMany({
-    orderBy: { timestamp: "desc" },
-    take: 100,
-    select: { id: true, aksi: true, target: true, ip: true, timestamp: true, user: { select: { nama: true, role: true } } },
-  });
+async function AuditTableSection({ page }: { page: number }) {
+  const [logs, total] = await Promise.all([
+    prisma.auditLog.findMany({
+      orderBy: { timestamp: "desc" },
+      take: PAGE_SIZE,
+      skip: (page - 1) * PAGE_SIZE,
+      select: { id: true, aksi: true, target: true, ip: true, timestamp: true, user: { select: { nama: true, role: true } } },
+    }),
+    prisma.auditLog.count(),
+  ]);
   const rows = logs.map((l) => ({
     id: l.id,
     waktu: l.timestamp.toISOString(),
@@ -103,7 +116,16 @@ async function AuditTableSection() {
     target: l.target,
     ip: l.ip ?? "—",
   }));
-  return <AuditTable rows={rows} />;
+  return (
+    <>
+      <AuditTable rows={rows} />
+      <Pagination
+        page={page}
+        totalPages={Math.max(1, Math.ceil(total / PAGE_SIZE))}
+        basePath="/dashboard/admin/audit"
+      />
+    </>
+  );
 }
 
 function KpiSkeleton() {

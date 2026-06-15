@@ -16,8 +16,8 @@ const ROLE_LABEL: Record<string, string> = { guru: "Wali Kelas", bk: "Guru BK" }
 
 export function SchoolUsersTable({ rows }: { rows: SchoolUserRow[] }) {
   const columns: Column<SchoolUserRow>[] = [
-    { key: "nama", header: "Nama", sortValue: (r) => r.nama },
-    { key: "email", header: "Email", cell: (r) => <span className="text-slate-500">{r.email}</span> },
+    { key: "nama", header: "Nama", sortValue: (r) => r.nama, truncate: true },
+    { key: "email", header: "Email", cell: (r) => <span className="text-slate-500">{r.email}</span>, truncate: true },
     {
       key: "role",
       header: "Peran",

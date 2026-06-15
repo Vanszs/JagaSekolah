@@ -95,7 +95,7 @@ export default function FaktorRisiko() {
               Behavior, Course — prediktor putus sekolah yang sudah tervalidasi riset internasional, lalu
               diadaptasi dengan faktor konteks Indonesia.
             </p>
-            <dl className="mt-8 grid grid-cols-3 gap-4 border-t border-slate-200 pt-6">
+            <dl className="mt-8 grid grid-cols-2 gap-4 border-t border-slate-200 pt-6 sm:grid-cols-3">
               {[
                 { n: "3", l: "Sinyal inti" },
                 { n: "A·B·C", l: "Kerangka" },

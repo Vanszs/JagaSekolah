@@ -44,7 +44,7 @@ export default async function AnalisisRisikoPage() {
         <RiskKpis scope={scope} />
       </Suspense>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-6 md:grid-cols-2">
         <Panel title="Faktor risiko dominan" desc="Jumlah siswa berisiko per faktor (merah + kuning).">
           <Suspense fallback={<ChartSkeleton h={260} />}>
             <FactorSection scope={scope} />

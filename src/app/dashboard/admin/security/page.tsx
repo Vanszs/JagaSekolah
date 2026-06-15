@@ -77,7 +77,7 @@ export default async function SecurityPage() {
           Data pribadi sensitif disimpan terenkripsi. Data key per-record dibungkus master key —
           rotasi tanpa enkripsi ulang seluruh basis data.
         </p>
-        <div className="mt-4 grid gap-4 sm:grid-cols-3">
+        <div className="mt-4 grid gap-4 sm:grid-cols-2 md:grid-cols-3">
           <StatTile label="Data key aktif" value={encAktif} accent={encAktif > 0 ? "hijau" : "kuning"} sub={`${encTotal} total`} />
           <StatTile
             label="Master key"
@@ -117,7 +117,7 @@ export default async function SecurityPage() {
                 return p > 0 ? <div key={s} className={CONSENT_META[s].bar} style={{ width: `${p}%` }} /> : null;
               })}
             </div>
-            <dl className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <dl className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
               {(["granted", "pending", "revoked"] as ConsentStatus[]).map((s) => (
                 <div key={s}>
                   <dt className="flex items-center gap-1.5 text-xs text-slate-500">

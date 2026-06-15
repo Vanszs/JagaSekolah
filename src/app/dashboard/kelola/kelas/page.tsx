@@ -3,7 +3,7 @@ import { Info } from "lucide-react";
 import { requireDashboardContext } from "@/lib/session";
 import { requireRole } from "@/lib/rbac";
 import { prisma } from "@/lib/db";
-import { PageHeader, Panel } from "@/components/dashboard/ui";
+import { PageHeader, Panel, EmptyState } from "@/components/dashboard/ui";
 import { KelolaKelasTable } from "@/components/dashboard/KelolaKelasTable";
 
 export const dynamic = "force-dynamic";
@@ -39,9 +39,13 @@ export default async function KelolaKelasPage() {
         desc="Daftar kelas di sekolah Anda beserta jumlah siswa dan wali kelas. Klik kelas untuk melihat roster."
       />
 
-      <Panel title="Daftar kelas" desc={`${rows.length} kelas terdaftar.`}>
-        <KelolaKelasTable rows={rows} sekolahId={ctx.sekolahId} />
-      </Panel>
+      {rows.length > 0 ? (
+        <Panel title="Daftar kelas" desc={`${rows.length} kelas terdaftar.`}>
+          <KelolaKelasTable rows={rows} sekolahId={ctx.sekolahId} />
+        </Panel>
+      ) : (
+        <EmptyState title="Belum ada kelas" desc="Kelas akan muncul setelah data diimpor dari Dapodik." />
+      )}
 
       <section className="rounded-lg border border-dashed border-slate-300 bg-slate-50/60 p-5">
         <div className="flex items-start gap-3">

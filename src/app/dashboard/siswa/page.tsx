@@ -5,10 +5,12 @@ import { prisma } from "@/lib/db";
 import { requireDashboardContext } from "@/lib/session";
 import { siswaScope, AuthError } from "@/lib/rbac";
 import { PageHeader, RiskDot, EmptyState } from "@/components/dashboard/ui";
+import { Pagination } from "@/components/dashboard/Pagination";
 import { RecomputeButton } from "@/components/dashboard/RecomputeButton";
 
 export const dynamic = "force-dynamic";
 
+const PAGE_SIZE = 50;
 const FILTERS: { key: "" | KategoriRisiko; label: string }[] = [
   { key: "", label: "Semua" },
   { key: "merah", label: "Risiko Tinggi" },
@@ -22,14 +24,15 @@ const RANK: Record<string, number> = { merah: 3, kuning: 2, hijau: 1 };
 export default async function SiswaListPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; kategori?: string }>;
+  searchParams: Promise<{ q?: string; kategori?: string; page?: string }>;
 }) {
   // ctx & searchParams independen -> jalankan paralel.
   const [ctx, sp] = await Promise.all([
     requireDashboardContext("/dashboard/siswa"),
     searchParams,
   ]);
-  const { q = "", kategori = "" } = sp;
+  const { q = "", kategori = "", page: pageStr = "1" } = sp;
+  const page = Math.max(1, Number.parseInt(pageStr, 10) || 1);
 
   // Dinas tidak boleh data per-siswa — tampilkan notice ramah (bukan crash).
   let where: Record<string, unknown>;
@@ -69,18 +72,23 @@ export default async function SiswaListPage({
       : {}),
   };
 
-  const siswa = await prisma.siswa.findMany({
-    where: siswaWhere,
-    select: {
-      id: true,
-      nama: true,
-      nisn: true,
-      kelas: { select: { nama: true } },
-      risiko: { where: { isLatest: true }, select: { kategori: true, skor: true }, take: 1 },
-    },
-    orderBy: [{ nama: "asc" }],
-    take: 100,
-  });
+  const [siswa, total] = await Promise.all([
+    prisma.siswa.findMany({
+      where: siswaWhere,
+      select: {
+        id: true,
+        nama: true,
+        nisn: true,
+        kelas: { select: { nama: true } },
+        risiko: { where: { isLatest: true }, select: { kategori: true, skor: true }, take: 1 },
+      },
+      orderBy: [{ nama: "asc" }, { id: "asc" }],
+      take: PAGE_SIZE,
+      skip: (page - 1) * PAGE_SIZE,
+    }),
+    prisma.siswa.count({ where: siswaWhere }),
+  ]);
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   // urutkan: berisiko tinggi dulu (merah>kuning>hijau>none), lalu skor desc
   const rows = siswa
@@ -165,11 +173,11 @@ export default async function SiswaListPage({
                   <tr key={s.id} className="group transition-colors hover:bg-slate-50">
                     <td className="px-4 py-3.5">
                       <Link href={`/dashboard/siswa/${s.id}`} className="font-semibold text-slate-900 hover:text-[#005D4C]">
-                        {s.nama}
+                        <span className="block max-w-xs truncate" title={s.nama}>{s.nama}</span>
                       </Link>
                       <span className="ml-2 text-xs tabular-nums text-slate-400">{s.nisn}</span>
                     </td>
-                    <td className="px-4 py-3.5 text-slate-600">{s.kelas.nama}</td>
+                    <td className="px-4 py-3.5 text-slate-600"><span className="block max-w-[8rem] truncate" title={s.kelas.nama}>{s.kelas.nama}</span></td>
                     <td className="px-4 py-3.5">
                       {s.r ? <RiskDot kategori={s.r.kategori} /> : <span className="text-xs text-slate-400">Belum dihitung</span>}
                     </td>
@@ -192,9 +200,12 @@ export default async function SiswaListPage({
           </div>
         </div>
       )}
-      {rows.length === 100 && (
-        <p className="mt-3 text-xs text-slate-400">Menampilkan 100 siswa teratas. Persempit dengan pencarian.</p>
-      )}
+      <Pagination
+        page={page}
+        totalPages={totalPages}
+        basePath="/dashboard/siswa"
+        searchParams={{ q: search || undefined, kategori: kategori || undefined }}
+      />
     </>
   );
 }

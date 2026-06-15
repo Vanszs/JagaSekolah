@@ -21,7 +21,7 @@ const RANK: Record<ConsentStatus, number> = { pending: 0, revoked: 1, granted: 2
 
 export function ConsentStudentsTable({ rows }: { rows: ConsentStudentRow[] }) {
   const columns: Column<ConsentStudentRow>[] = [
-    { key: "nama", header: "Nama", sortValue: (r) => r.nama },
+    { key: "nama", header: "Nama", sortValue: (r) => r.nama, truncate: true },
     { key: "nisn", header: "NISN", cell: (r) => <span className="tabular-nums text-slate-500">{r.nisn}</span> },
     { key: "kelas", header: "Kelas", sortValue: (r) => r.kelas },
     {

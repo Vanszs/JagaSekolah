@@ -27,9 +27,9 @@ const fmt = (iso: string) =>
 export function SyncLogTable({ rows }: { rows: SyncLogRow[] }) {
   const columns: Column<SyncLogRow>[] = [
     { key: "waktu", header: "Waktu", sortValue: (r) => r.waktu, cell: (r) => <span className="tabular-nums">{fmt(r.waktu)}</span> },
-    { key: "sekolah", header: "Sekolah", sortValue: (r) => r.sekolah },
+    { key: "sekolah", header: "Sekolah", sortValue: (r) => r.sekolah, truncate: true },
     { key: "status", header: "Status", sortValue: (r) => r.status, cell: (r) => <StatusBadge status={r.status} /> },
-    { key: "key", header: "Kunci Idempoten", cell: (r) => <span className="font-mono text-xs text-slate-400">{r.idempotencyKey.slice(0, 16)}…</span> },
+    { key: "key", header: "Kunci Idempoten", cell: (r) => <span className="font-mono text-xs text-slate-400" title={r.idempotencyKey}>{r.idempotencyKey.slice(0, 16)}…</span>, truncate: true },
   ];
   return (
     <SortableTable

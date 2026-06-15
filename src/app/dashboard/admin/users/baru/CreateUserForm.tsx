@@ -132,7 +132,7 @@ export default function CreateUserForm({ actorRole, roles, sekolah, wilayah, kel
         </p>
       )}
       {error && (
-        <p role="alert" className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+        <p id="create-user-error" role="alert" className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
           <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
           {error}
         </p>
@@ -140,18 +140,46 @@ export default function CreateUserForm({ actorRole, roles, sekolah, wilayah, kel
 
       <div className="space-y-1.5">
         <label htmlFor="nama" className="block text-sm font-medium text-slate-900">Nama lengkap</label>
-        <input id="nama" name="nama" type="text" required maxLength={120} className={fieldCls} placeholder="mis. Budi Santoso" />
+        <input
+          id="nama"
+          name="nama"
+          type="text"
+          required
+          maxLength={120}
+          aria-describedby={error ? "create-user-error" : undefined}
+          className={fieldCls}
+          placeholder="mis. Budi Santoso"
+        />
       </div>
 
       <div className="grid gap-5 sm:grid-cols-2">
         <div className="space-y-1.5">
           <label htmlFor="email" className="block text-sm font-medium text-slate-900">Email</label>
-          <input id="email" name="email" type="email" required autoComplete="off" className={fieldCls} placeholder="nama@sekolah.sch.id" />
+          <input
+            id="email"
+            name="email"
+            type="email"
+            required
+            autoComplete="off"
+            aria-describedby={error ? "create-user-error" : undefined}
+            className={fieldCls}
+            placeholder="nama@sekolah.sch.id"
+          />
         </div>
         <div className="space-y-1.5">
           <label htmlFor="password" className="block text-sm font-medium text-slate-900">Kata sandi awal</label>
-          <input id="password" name="password" type="text" required minLength={8} maxLength={100} className={fieldCls} placeholder="min. 8 karakter" />
-          <p className="text-xs text-slate-400">Pengguna sebaiknya menggantinya setelah login pertama.</p>
+          <input
+            id="password"
+            name="password"
+            type="text"
+            required
+            minLength={8}
+            maxLength={100}
+            aria-describedby={"password-hint" + (error ? " create-user-error" : "")}
+            className={fieldCls}
+            placeholder="min. 8 karakter"
+          />
+          <p id="password-hint" className="text-xs text-slate-400">Pengguna sebaiknya menggantinya setelah login pertama.</p>
         </div>
       </div>
 
@@ -163,6 +191,7 @@ export default function CreateUserForm({ actorRole, roles, sekolah, wilayah, kel
           required
           value={role}
           onChange={(e) => dispatch({ type: "setRole", role: e.target.value as Role })}
+          aria-describedby={error ? "create-user-error" : undefined}
           className={fieldCls}
         >
           <option value="" disabled>Pilih peran…</option>
@@ -192,6 +221,7 @@ export default function CreateUserForm({ actorRole, roles, sekolah, wilayah, kel
               required
               value={sekolahId}
               onChange={(e) => dispatch({ type: "setSekolah", sekolahId: e.target.value })}
+              aria-describedby={error ? "create-user-error" : undefined}
               className={fieldCls}
             >
               <option value="" disabled>Pilih sekolah…</option>
@@ -207,7 +237,14 @@ export default function CreateUserForm({ actorRole, roles, sekolah, wilayah, kel
       {needKelas && (
         <div className="space-y-1.5">
           <label htmlFor="kelasId" className="block text-sm font-medium text-slate-900">Kelas (wali)</label>
-          <select id="kelasId" name="kelasId" required className={fieldCls} disabled={!sekolahId}>
+          <select
+            id="kelasId"
+            name="kelasId"
+            required
+            aria-describedby={error ? "create-user-error" : undefined}
+            className={fieldCls}
+            disabled={!sekolahId}
+          >
             <option value="" disabled>{sekolahId ? "Pilih kelas…" : "Pilih sekolah dulu"}</option>
             {kelasOptions.map((k) => (
               <option key={k.id} value={k.id}>{k.nama}</option>
@@ -226,6 +263,7 @@ export default function CreateUserForm({ actorRole, roles, sekolah, wilayah, kel
               name="dinasLevel"
               value={dinasLevelSel}
               onChange={(e) => setDinasLevelSel(e.target.value as "pusat" | "provinsi" | "kabupaten")}
+              aria-describedby={error ? "create-user-error" : undefined}
               className={fieldCls}
             >
               <option value="pusat">Pusat (nasional)</option>
@@ -236,7 +274,13 @@ export default function CreateUserForm({ actorRole, roles, sekolah, wilayah, kel
           {dinasLevelSel === "provinsi" && (
             <div className="space-y-1.5">
               <label htmlFor="provinsi" className="block text-sm font-medium text-slate-900">Provinsi</label>
-              <select id="provinsi" name="provinsi" required className={fieldCls}>
+              <select
+                id="provinsi"
+                name="provinsi"
+                required
+                aria-describedby={error ? "create-user-error" : undefined}
+                className={fieldCls}
+              >
                 <option value="" disabled>Pilih provinsi…</option>
                 {provinsiList.map((p) => (
                   <option key={p} value={p}>{p}</option>
@@ -247,7 +291,13 @@ export default function CreateUserForm({ actorRole, roles, sekolah, wilayah, kel
           {dinasLevelSel === "kabupaten" && (
             <div className="space-y-1.5">
               <label htmlFor="wilayahId" className="block text-sm font-medium text-slate-900">Wilayah (kabupaten/kota)</label>
-              <select id="wilayahId" name="wilayahId" required className={fieldCls}>
+              <select
+                id="wilayahId"
+                name="wilayahId"
+                required
+                aria-describedby={error ? "create-user-error" : undefined}
+                className={fieldCls}
+              >
                 <option value="" disabled>Pilih wilayah…</option>
                 {wilayah.map((w) => (
                   <option key={w.id} value={w.id}>{w.label}</option>

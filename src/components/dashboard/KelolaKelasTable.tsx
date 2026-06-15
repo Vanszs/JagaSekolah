@@ -19,6 +19,7 @@ export function KelolaKelasTable({ rows, sekolahId }: { rows: KelolaKelasRow[]; 
       header: "Wali kelas",
       sortValue: (r) => r.wali,
       cell: (r) => <span className={r.adaWali ? "text-slate-600" : "text-amber-600"}>{r.wali}</span>,
+      truncate: true,
     },
   ];
   return (
