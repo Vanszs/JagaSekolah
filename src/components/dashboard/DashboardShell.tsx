@@ -350,8 +350,8 @@ export default function DashboardShell({ nav, user, children }: Props) {
             <Menu className="h-5 w-5" aria-hidden="true" />
           </button>
 
-          {/* Breadcrumb — di kiri topbar khusus rute admin (superdinas superadmin) */}
-          {isAdminRoute ? <TopBreadcrumb role={user.role} variant="topbar" /> : null}
+          {/* Breadcrumb — di kiri topbar (semua rute) */}
+          <TopBreadcrumb role={user.role} variant="topbar" />
 
           {/* Sekolah / tenant context (kepsek/guru/bk, non-admin) */}
           {!isAdminRoute && user.sekolah ? (
@@ -397,7 +397,6 @@ export default function DashboardShell({ nav, user, children }: Props) {
 
         <main className="flex-1 overflow-y-auto px-4 py-6 md:px-6 lg:py-[22px]">
           <div className="mx-auto w-full max-w-[1400px]">
-            {isAdminRoute ? null : <TopBreadcrumb role={user.role} />}
             {children}
           </div>
         </main>

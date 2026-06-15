@@ -102,11 +102,11 @@ function Bar({ items }: { items: { label: string; href?: string }[] }) {
 
 function Topbar({ items }: { items: { label: string; href?: string }[] }) {
   return (
-    <nav aria-label="Breadcrumb" className="hidden items-center gap-2 text-[13px] lg:flex">
+    <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-2 overflow-hidden text-[13px]">
       {items.map((c, i) => {
         const last = i === items.length - 1;
         return (
-          <span key={`${c.label}-${i}`} className="flex items-center gap-2">
+          <span key={`${c.label}-${i}`} className="flex shrink-0 items-center gap-2 whitespace-nowrap">
             {i > 0 ? <span className="text-slate-300" aria-hidden="true">|</span> : null}
             {c.href && !last ? (
               <Link href={c.href} className="text-slate-500 transition-colors hover:text-[#005D4C]">
